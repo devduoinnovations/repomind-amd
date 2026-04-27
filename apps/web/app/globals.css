@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+/* =============================================================
+   RepoMind Design Tokens — Cyberpunk Anime Terminal
+   ============================================================= */
+
+:root {
+  /* Backgrounds */
+  --void:    #04040e;
+  --panel:   #09091a;
+  --surface: #0f0f22;
+  --hover:   #141428;
+
+  /* Borders */
+  --border:       rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --border-focus: rgba(255, 255, 255, 0.25);
+
+  /* Text */
+  --text-primary:   #ece9ff;
+  --text-secondary: #8b8aaa;
+  --text-muted:     #4e4b6a;
+  --text-code:      #a5f3a5;
+
+  /* Agent colors */
+  --sparky: #f59e0b;
+  --patch:  #14b8a6;
+  --sage:   #8b5cf6;
+  --nova:   #ec4899;
+  --lyra:   #60a5fa;
+  --scout:  #22c55e;
+
+  /* AMD */
+  --amd-red: #ed1c24;
+
+  /* Semantic */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger:  #ef4444;
+  --info:    #60a5fa;
+
+  /* Type scale */
+  --fs-hero:    96px;
+  --fs-display: 56px;
+  --fs-h1:      40px;
+  --fs-h2:      28px;
+  --fs-h3:      20px;
+  --fs-body:    15px;
+  --fs-ui:      13px;
+  --fs-label:   11px;
+  --fs-code:    13px;
+
+  /* Line heights */
+  --lh-tight: 1.0;
+  --lh-snug:  1.2;
+  --lh-body:  1.5;
+
+  /* Letter spacing */
+  --ls-display: 0.02em;
+  --ls-label:   0.12em;
+  --ls-mono:    0;
+
+  /* Radii */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-lift:  0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7);
+
+  /* Layout */
+  --topbar-h:     64px;
+  --crew-w:       240px;
+  --slideover-w:  380px;
+
+  /* Motion */
+  --ease-snap:  cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-pulse: cubic-bezier(0.4, 0, 0.6, 1);
+  --dur-fast:   120ms;
+  --dur-base:   220ms;
+  --dur-slow:   400ms;
+}
+
+/* =============================================================
+   Keyframes
+   ============================================================= */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.85); }
+}
+
+@keyframes borderPulse {
+  0%, 100% { border-color: var(--border); }
+  50%       { border-color: var(--agent); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-4px) scale(1.04); }
+}
+
+@keyframes blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes slidedown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+@keyframes slideleft {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slidein {
+  from { transform: translateX(-10px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* =============================================================
+   Base
+   ============================================================= */
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--void);
+  color: var(--text-primary);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; }
+
+/* =============================================================
+   Sprites
+   ============================================================= */
+
+.sprite-idle img  { animation: float  3.2s ease-in-out infinite; }
+.sprite-working img { animation: bounce 0.8s ease-in-out infinite; }
+
+/* =============================================================
+   Agent card
+   ============================================================= */
+
+.agent-card.is-working { animation: borderPulse 1.6s ease-in-out infinite; }
+
+/* =============================================================
+   Tabs
+   ============================================================= */
+
+.tabs button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 120ms;
+}
+
+.tabs button.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+}
+
+/* =============================================================
+   Scrollbars
+   ============================================================= */
+
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb    { background: rgba(255,255,255,0.06); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
