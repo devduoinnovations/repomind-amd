@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import type { AgentState, AgentName, Ticket, ActivityEvent, AmdMetrics } from '@/lib/types'
 import { INITIAL_AGENTS, INITIAL_METRICS, INITIAL_LOG } from '@/lib/fake-data'
 import { Topbar } from '@/components/Topbar'
@@ -12,6 +14,7 @@ import { ChatPanel } from '@/components/ChatPanel'
 import { ArchitecturePanel } from '@/components/ArchitecturePanel'
 import { ReleasesPanel } from '@/components/ReleasesPanel'
 import { SuggestionsPanel } from '@/components/SuggestionsPanel'
+import { NewProjectModal } from '@/components/NewProjectModal'
 
 const TABS = ['Kanban', 'Suggestions', 'Architecture', 'Releases', 'Q&A'] as const
 type Tab = typeof TABS[number]
@@ -63,6 +66,9 @@ function mapTicket(t: RawTicket): Ticket {
 }
 
 export default function App() {
+  const { status } = useSession()
+  const router = useRouter()
+
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [agents, setAgents] = useState<AgentState[]>(INITIAL_AGENTS)
@@ -76,6 +82,12 @@ export default function App() {
   const [agentModal, setAgentModal] = useState<AgentName | null>(null)
   const [flashId, setFlashId] = useState<string | null>(null)
   const [loadingTickets, setLoadingTickets] = useState(false)
+  const [suggestionCount, setSuggestionCount] = useState(0)
+  const [newProjectOpen, setNewProjectOpen] = useState(false)
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.replace('/login')
+  }, [status, router])
 
   // Load projects on mount
   useEffect(() => {
@@ -111,6 +123,7 @@ export default function App() {
       if (!res.ok) return
       const data = await res.json()
       const count = (data.suggestions || []).length
+      setSuggestionCount(count)
       if (count > 0) {
         setFeed(f => [
           { color: '#14b8a6', text: `PATCH found <span style="color:#14b8a6">${count} pending suggestions</span>`, ago: 'now' },
@@ -219,6 +232,14 @@ export default function App() {
 
   const gpuRounded = Math.round(metrics.gpu)
 
+  if (status === 'loading' || status === 'unauthenticated') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-muted)', background: 'var(--void)' }}>
+        {status === 'loading' ? 'authenticating…' : 'redirecting…'}
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <Topbar
@@ -227,6 +248,7 @@ export default function App() {
         projects={projects}
         selectedProject={selectedProject}
         onSelectProject={(p) => setSelectedProject(p)}
+        onAddProject={() => setNewProjectOpen(true)}
       />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -243,7 +265,14 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--panel)', flexShrink: 0 }}>
             <div className="tabs" style={{ display: 'flex' }}>
               {TABS.map(t => (
-                <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>
+                <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>
+                  {t}
+                  {t === 'Suggestions' && suggestionCount > 0 && (
+                    <span style={{ marginLeft: 6, background: '#14b8a6', color: '#fff', borderRadius: 999, padding: '1px 6px', fontSize: 9, fontFamily: 'var(--font-mono)', verticalAlign: 'middle' }}>
+                      {suggestionCount}
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
             <div style={{ marginLeft: 'auto', padding: '0 16px' }}>
@@ -266,7 +295,7 @@ export default function App() {
             </div>
           </div>
 
-          <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} />
+          <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
 
           <div style={{ flex: 1, minHeight: 0 }}>
             {tab === 'Kanban' && (
@@ -293,6 +322,17 @@ export default function App() {
 
       {agentModal && (
         <AgentModal agentName={agentModal} agents={agents} onClose={() => setAgentModal(null)} />
+      )}
+
+      {newProjectOpen && (
+        <NewProjectModal
+          onClose={() => setNewProjectOpen(false)}
+          onCreated={(project) => {
+            setProjects(ps => [...ps, project])
+            setSelectedProject(project)
+            setNewProjectOpen(false)
+          }}
+        />
       )}
     </div>
   )
