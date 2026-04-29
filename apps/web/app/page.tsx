@@ -369,6 +369,26 @@ export default function App() {
             setProjects(ps => [...ps, project])
             setSelectedProject(project)
             setNewProjectOpen(false)
+            if ((project as any)._initialised) {
+              setTimeout(async () => {
+                setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'working' } : x))
+                setFeed(f => [{ color: '#22c55e', text: 'SCOUT <span style="color:#22c55e">scanning new repo…</span>', ago: 'now' }, ...f])
+                try {
+                  const res = await fetch(`/api/projects/${project.id}/scan`, { method: 'POST' })
+                  const data = await res.json()
+                  if (res.ok) {
+                    setFeed(f => [
+                      { color: '#22c55e', text: `SCOUT <span style="color:#22c55e">indexed ${data.moduleCount} modules</span>`, ago: 'now' },
+                      ...f,
+                    ])
+                    setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))
+                    setTimeout(() => setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'idle' } : x)), 3000)
+                  }
+                } catch {
+                  setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'error' } : x))
+                }
+              }, 800)
+            }
           }}
         />
       )}

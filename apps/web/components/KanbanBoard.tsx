@@ -18,6 +18,7 @@ interface Props {
   tickets: Ticket[]
   flashId: string | null
   onStatusChange?: (ticketId: string, newStatus: string, ticketPath?: string) => void
+  onTicketClick?: (ticket: Ticket) => void
 }
 
 const COLS: TicketStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
@@ -30,7 +31,7 @@ const COL_COLOR: Record<TicketStatus, string> = {
   DONE:        '#22c55e',
 }
 
-function DroppableColumn({ col, tickets, flashId }: { col: TicketStatus; tickets: Ticket[]; flashId: string | null }) {
+function DroppableColumn({ col, tickets, flashId, onTicketClick }: { col: TicketStatus; tickets: Ticket[]; flashId: string | null; onTicketClick?: (t: Ticket) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: col })
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -51,7 +52,7 @@ function DroppableColumn({ col, tickets, flashId }: { col: TicketStatus; tickets
         }}
       >
         {tickets.map(t => (
-          <DraggableTicket key={t.id} ticket={t} flash={t.id === flashId} />
+          <DraggableTicket key={t.id} ticket={t} flash={t.id === flashId} onClick={onTicketClick} />
         ))}
         {tickets.length === 0 && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', padding: 12, textAlign: 'center' }}>—</div>
@@ -61,7 +62,7 @@ function DroppableColumn({ col, tickets, flashId }: { col: TicketStatus; tickets
   )
 }
 
-function DraggableTicket({ ticket, flash }: { ticket: Ticket; flash: boolean }) {
+function DraggableTicket({ ticket, flash, onClick }: { ticket: Ticket; flash: boolean; onClick?: (t: Ticket) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: ticket.id,
     data: { ticket },
@@ -71,6 +72,7 @@ function DraggableTicket({ ticket, flash }: { ticket: Ticket; flash: boolean }) 
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onClick={() => { if (!isDragging) onClick?.(ticket) }}
       style={{
         transform: transform ? CSS.Translate.toString(transform) : undefined,
         opacity: isDragging ? 0.35 : 1,
@@ -83,7 +85,7 @@ function DraggableTicket({ ticket, flash }: { ticket: Ticket; flash: boolean }) 
   )
 }
 
-export function KanbanBoard({ tickets, flashId, onStatusChange }: Props) {
+export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick }: Props) {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -112,7 +114,7 @@ export function KanbanBoard({ tickets, flashId, onStatusChange }: Props) {
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, padding: 20, height: '100%', overflow: 'auto' }}>
         {COLS.map(col => (
-          <DroppableColumn key={col} col={col} tickets={grouped[col]} flashId={flashId} />
+          <DroppableColumn key={col} col={col} tickets={grouped[col]} flashId={flashId} onTicketClick={onTicketClick} />
         ))}
       </div>
       <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>

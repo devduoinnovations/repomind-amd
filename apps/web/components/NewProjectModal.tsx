@@ -11,7 +11,7 @@ interface Project {
 
 interface Props {
   onClose: () => void
-  onCreated: (project: Project) => void
+  onCreated: (project: Project & { _initialised?: boolean }) => void
 }
 
 function slugify(name: string) {
@@ -39,7 +39,7 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), repo_full: repo.trim(), slug }),
+        body: JSON.stringify({ name: name.trim(), repoFull: repo.trim(), slug }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create project')
