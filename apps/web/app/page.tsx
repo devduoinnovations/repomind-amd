@@ -15,6 +15,8 @@ import { ArchitecturePanel } from '@/components/ArchitecturePanel'
 import { ReleasesPanel } from '@/components/ReleasesPanel'
 import { SuggestionsPanel } from '@/components/SuggestionsPanel'
 import { NewProjectModal } from '@/components/NewProjectModal'
+import { TicketDetailModal } from '@/components/TicketDetailModal'
+import { OnboardingEmpty } from '@/components/OnboardingEmpty'
 
 const TABS = ['Kanban', 'Suggestions', 'Architecture', 'Releases', 'Q&A'] as const
 type Tab = typeof TABS[number]
@@ -84,6 +86,7 @@ export default function App() {
   const [loadingTickets, setLoadingTickets] = useState(false)
   const [suggestionCount, setSuggestionCount] = useState(0)
   const [newProjectOpen, setNewProjectOpen] = useState(false)
+  const [ticketDetail, setTicketDetail] = useState<Ticket | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login')
@@ -219,14 +222,18 @@ export default function App() {
 
   const onTicketStatusChange = async (ticketId: string, newStatus: string, ticketPath?: string) => {
     if (!selectedProject) return
+    // Optimistic update — move card immediately
+    setTickets(ts => ts.map(t => t.id === ticketId ? { ...t, status: newStatus as Ticket['status'] } : t))
     try {
       await fetch(`/api/projects/${selectedProject.id}/repomind/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus.toLowerCase().replace('_', '-'), path: ticketPath }),
+        body: JSON.stringify({ status: newStatus.toLowerCase().replace(/_/g, '-'), path: ticketPath }),
       })
     } catch (err) {
       console.error('Failed to update ticket:', err)
+      // Revert on failure
+      loadTickets(selectedProject.id)
     }
   }
 
@@ -261,55 +268,62 @@ export default function App() {
         />
 
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {/* Tab bar */}
-          <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--panel)', flexShrink: 0 }}>
-            <div className="tabs" style={{ display: 'flex' }}>
-              {TABS.map(t => (
-                <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>
-                  {t}
-                  {t === 'Suggestions' && suggestionCount > 0 && (
-                    <span style={{ marginLeft: 6, background: '#14b8a6', color: '#fff', borderRadius: 999, padding: '1px 6px', fontSize: 9, fontFamily: 'var(--font-mono)', verticalAlign: 'middle' }}>
-                      {suggestionCount}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div style={{ marginLeft: 'auto', padding: '0 16px' }}>
-              <button
-                onClick={() => setPlanOpen(true)}
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 600,
-                  fontSize: 12,
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-hover)',
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                }}
-              >
-                + New Plan
-              </button>
-            </div>
-          </div>
+          {!selectedProject && projects.length === 0 ? (
+            <OnboardingEmpty onAddProject={() => setNewProjectOpen(true)} />
+          ) : (
+            <>
+              {/* Tab bar */}
+              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--panel)', flexShrink: 0 }}>
+                <div className="tabs" style={{ display: 'flex' }}>
+                  {TABS.map(t => (
+                    <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>
+                      {t}
+                      {t === 'Suggestions' && suggestionCount > 0 && (
+                        <span style={{ marginLeft: 6, background: '#14b8a6', color: '#fff', borderRadius: 999, padding: '1px 6px', fontSize: 9, fontFamily: 'var(--font-mono)', verticalAlign: 'middle' }}>
+                          {suggestionCount}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginLeft: 'auto', padding: '0 16px' }}>
+                  <button
+                    onClick={() => setPlanOpen(true)}
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontWeight: 600,
+                      fontSize: 12,
+                      background: 'var(--surface)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-hover)',
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + New Plan
+                  </button>
+                </div>
+              </div>
 
-          <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
+              <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
 
-          <div style={{ flex: 1, minHeight: 0 }}>
-            {tab === 'Kanban' && (
-              <KanbanBoard
-                tickets={loadingTickets && tickets.length === 0 ? [] : tickets}
-                flashId={flashId}
-                onStatusChange={onTicketStatusChange}
-              />
-            )}
-            {tab === 'Suggestions' && <SuggestionsPanel projectId={selectedProject?.id ?? null} onApproved={() => loadTickets(selectedProject!.id)} />}
-            {tab === 'Architecture' && <ArchitecturePanel projectId={selectedProject?.id ?? null} />}
-            {tab === 'Releases' && <ReleasesPanel projectId={selectedProject?.id ?? null} />}
-            {tab === 'Q&A' && <ChatPanel projectId={selectedProject?.id ?? null} />}
-          </div>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                {tab === 'Kanban' && (
+                  <KanbanBoard
+                    tickets={loadingTickets && tickets.length === 0 ? [] : tickets}
+                    flashId={flashId}
+                    onStatusChange={onTicketStatusChange}
+                    onTicketClick={t => setTicketDetail(t)}
+                  />
+                )}
+                {tab === 'Suggestions' && <SuggestionsPanel projectId={selectedProject?.id ?? null} onApproved={() => loadTickets(selectedProject!.id)} />}
+                {tab === 'Architecture' && <ArchitecturePanel projectId={selectedProject?.id ?? null} />}
+                {tab === 'Releases' && <ReleasesPanel projectId={selectedProject?.id ?? null} />}
+                {tab === 'Q&A' && <ChatPanel projectId={selectedProject?.id ?? null} />}
+              </div>
+            </>
+          )}
         </main>
       </div>
 
@@ -321,7 +335,31 @@ export default function App() {
       />
 
       {agentModal && (
-        <AgentModal agentName={agentModal} agents={agents} onClose={() => setAgentModal(null)} />
+        <AgentModal
+          agentName={agentModal}
+          agents={agents}
+          onClose={() => setAgentModal(null)}
+          selectedProjectId={selectedProject?.id ?? null}
+          onScanComplete={(result) => {
+            setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))
+            setFeed(f => [
+              { color: '#60a5fa', text: `SCOUT <span style="color:#60a5fa">indexed ${result.moduleCount} modules from ${result.fileCount} files</span>`, ago: 'now' },
+              ...f,
+            ])
+            setTimeout(() => setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'idle' } : x)), 3000)
+          }}
+        />
+      )}
+
+      {ticketDetail && (
+        <TicketDetailModal
+          ticket={ticketDetail}
+          onClose={() => setTicketDetail(null)}
+          onStatusChange={(id, status, path) => {
+            onTicketStatusChange(id, status, path)
+            setTicketDetail(null)
+          }}
+        />
       )}
 
       {newProjectOpen && (
