@@ -1,15 +1,9 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { MascotSprite } from '@/components/mascots/MascotSprite'
+import { MascotSprite } from './mascots/MascotSprite'
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-}
-
-interface Props {
-  projectId: string | null
-}
+interface Message { role: 'user' | 'assistant'; content: string }
+interface Props { projectId: string | null }
 
 export function ChatPanel({ projectId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
@@ -19,48 +13,32 @@ export function ChatPanel({ projectId }: Props) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, loading])
 
-  const send = async () => {
-    if (!input.trim() || !projectId || loading) return
-
-    const userMsg: Message = { role: 'user', content: input.trim() }
-    const next = [...messages, userMsg]
-    setMessages(next)
+  async function send() {
+    const text = input.trim()
+    if (!text || loading || !projectId) return
     setInput('')
+    const next: Message[] = [...messages, { role: 'user', content: text }]
+    setMessages(next)
     setLoading(true)
-
     try {
       const res = await fetch(`/api/projects/${projectId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ message: text, history: messages }),
       })
       const data = await res.json()
-      if (data.content) {
-        setMessages(m => [...m, { role: 'assistant', content: data.content }])
-      } else {
-        setMessages(m => [...m, { role: 'assistant', content: `Error: ${data.error || 'Unknown error'}` }])
-      }
-    } catch (err: any) {
-      setMessages(m => [...m, { role: 'assistant', content: `Network error: ${err.message}` }])
+      setMessages(m => [...m, { role: 'assistant', content: data.reply ?? data.error ?? 'Error' }])
+    } catch {
+      setMessages(m => [...m, { role: 'assistant', content: 'Network error. Try again.' }])
     } finally {
       setLoading(false)
     }
   }
 
-  if (!projectId) {
-    return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <MascotSprite name="LYRA" state="idle" w={160} h={240} />
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>SELECT A PROJECT</div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>LYRA needs a codebase to search</div>
-      </div>
-    )
-  }
-
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <MascotSprite name="LYRA" state={loading ? 'working' : 'idle'} w={32} h={48} />
@@ -71,82 +49,79 @@ export function ChatPanel({ projectId }: Props) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', marginTop: 40, letterSpacing: '0.06em' }}>
-            Ask LYRA anything about your codebase
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, opacity: 0.6 }}>
+            <MascotSprite name="LYRA" state="idle" w={80} h={120} />
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
+              {projectId ? 'Ask LYRA anything about this codebase.' : 'Select a project first.'}
+            </div>
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} style={{
-            alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-            maxWidth: '80%',
-            background: m.role === 'user' ? 'rgba(96,165,250,0.15)' : 'var(--surface)',
-            border: `1px solid ${m.role === 'user' ? 'rgba(96,165,250,0.3)' : 'var(--border)'}`,
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 12,
-            color: 'var(--text-primary)',
-            lineHeight: 1.6,
-            whiteSpace: 'pre-wrap',
-          }}>
-            {m.content}
+          <div key={i} style={{ display: 'flex', gap: 12, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              lineHeight: 1.6,
+              background: m.role === 'user' ? 'rgba(245,158,11,0.1)' : 'var(--surface)',
+              border: `1px solid ${m.role === 'user' ? 'rgba(245,158,11,0.3)' : 'var(--border)'}`,
+              borderRadius: 10,
+              padding: '10px 14px',
+              maxWidth: '75%',
+              color: 'var(--text-primary)',
+              whiteSpace: 'pre-wrap',
+            }}>
+              {m.content}
+            </div>
           </div>
         ))}
         {loading && (
-          <div style={{
-            alignSelf: 'flex-start',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 12,
-            color: '#60a5fa',
-          }}>
-            LYRA is searching...
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#60a5fa' }}>
+              LYRA is thinking▊
+            </div>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, flexShrink: 0 }}>
+      <div style={{ borderTop: '1px solid var(--border)', padding: '14px 20px', display: 'flex', gap: 10 }}>
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-          placeholder="Ask about your codebase..."
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+          placeholder={projectId ? 'Ask about this codebase…' : 'Select a project first'}
+          disabled={!projectId || loading}
           style={{
             flex: 1,
-            background: 'var(--surface)',
+            background: 'var(--void)',
             border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: '8px 12px',
+            borderRadius: 8,
+            padding: '10px 14px',
+            color: 'var(--text-primary)',
             fontFamily: 'var(--font-mono)',
             fontSize: 12,
-            color: 'var(--text-primary)',
             outline: 'none',
           }}
         />
         <button
           onClick={send}
-          disabled={!input.trim() || loading}
+          disabled={!projectId || loading || !input.trim()}
           style={{
-            background: '#60a5fa',
-            color: '#0a0a14',
-            border: 'none',
-            borderRadius: 6,
-            padding: '8px 16px',
             fontFamily: 'var(--font-display)',
             fontSize: 12,
             letterSpacing: '0.06em',
-            cursor: 'pointer',
-            opacity: (!input.trim() || loading) ? 0.4 : 1,
+            background: (!projectId || loading || !input.trim()) ? 'var(--surface)' : '#60a5fa',
+            color: (!projectId || loading || !input.trim()) ? 'var(--text-muted)' : '#0a0a14',
+            border: 'none',
+            padding: '10px 18px',
+            borderRadius: 6,
+            cursor: (!projectId || loading || !input.trim()) ? 'default' : 'pointer',
           }}
         >
-          SEND
+          ASK
         </button>
       </div>
     </div>
