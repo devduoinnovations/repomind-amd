@@ -1,4 +1,5 @@
-import { PLAN_DECOMPOSITION_PROMPT } from "./prompts";
+import { buildPlanDecompositionPrompt } from "./prompts";
+import { RepoMindConfig } from "@/lib/repomind-config";
 
 export interface DecomposedTask {
   id: string;
@@ -24,16 +25,20 @@ export interface DecomposedPlan {
 
 export async function decomposePlan(
   planText: string,
-  moduleGraph: any
+  moduleGraph: any,
+  config?: RepoMindConfig
 ): Promise<DecomposedPlan> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set.");
   }
 
-  const prompt = PLAN_DECOMPOSITION_PROMPT
-    .replace("{{planText}}", planText)
-    .replace("{{moduleGraph}}", JSON.stringify(moduleGraph, null, 2));
+  const prompt = buildPlanDecompositionPrompt(planText, moduleGraph, {
+    tone: config?.ai?.tone,
+    audience: config?.ai?.audience,
+    idFormat: config?.tickets?.id_format,
+    epicFormat: config?.tickets?.epic_format,
+  });
 
   const model = "gemini-flash-latest";
   const response = await fetch(

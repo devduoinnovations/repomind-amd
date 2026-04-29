@@ -42,23 +42,44 @@ ${commitList}
 `.trim();
 }
 
-export const PLAN_DECOMPOSITION_PROMPT = `
-You are a senior technical architect. Your job is to take a high-level project plan and decompose it into a structured set of actionable tickets (Epics and Tasks) based on the provided codebase context.
+export function buildPlanDecompositionPrompt(
+  planText: string,
+  moduleGraph: object,
+  config?: {
+    tone?: string
+    audience?: string
+    idFormat?: string
+    epicFormat?: string
+  }
+): string {
+  const tone = config?.tone ?? "technical"
+  const audience = config?.audience ?? "developers"
+  const idFormat = config?.idFormat ?? "T-{n}"
+  const epicFormat = config?.epicFormat ?? "EPIC-{n}"
 
-Codebase Context (Module Graph):
-{{moduleGraph}}
+  return `You are a senior technical architect. Decompose the project plan into Epics and Tasks.
+
+Project Config:
+- Tone: ${tone}
+- Target audience: ${audience}
+- Ticket ID format: ${idFormat}
+- Epic ID format: ${epicFormat}
+
+Codebase Module Graph (use module IDs for linked_modules):
+${JSON.stringify(moduleGraph, null, 2)}
 
 Project Plan:
-{{planText}}
+${planText}
 
 Rules:
-1. Break down the plan into 2-5 Epics.
-2. Each Epic should have 3-8 Tasks.
-3. Every Task must have a title, short description, and a list of specific acceptance criteria.
-4. Try to link tasks to specific modules from the module graph if they are related.
-5. Estimate complexity (XS, S, M, L, XL) and priority (low, medium, high, urgent).
+1. Break into 2-5 Epics. Each Epic has 3-8 Tasks.
+2. Task titles and descriptions should be written for ${audience} in a ${tone} tone.
+3. Use the ticket ID format "${idFormat}" (replace {n} with sequential numbers, e.g. T-001).
+4. Use the epic ID format "${epicFormat}" (replace {n} with sequential numbers, e.g. EPIC-001).
+5. Every Task must have acceptance_criteria (3-5 items) and linked_modules from the module graph.
+6. Estimate complexity (XS, S, M, L, XL) and priority (low, medium, high, urgent).
 
-Respond ONLY with a valid JSON object in this exact format:
+Respond ONLY with valid JSON:
 {
   "epics": [
     {
@@ -74,11 +95,10 @@ Respond ONLY with a valid JSON object in this exact format:
           "priority": "medium",
           "complexity": "M",
           "acceptance_criteria": ["...", "..."],
-          "linked_modules": ["module-id-1"]
+          "linked_modules": ["module-id"]
         }
       ]
     }
   ]
+}`
 }
-Do not include any explanation or markdown outside the JSON.
-`;
