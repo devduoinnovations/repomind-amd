@@ -15,6 +15,7 @@ interface Props {
   projects: Project[]
   selectedProject: Project | null
   onSelectProject: (p: Project) => void
+  onAddProject: () => void
 }
 
 export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectProject }: Props) {
