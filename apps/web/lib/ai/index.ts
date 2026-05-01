@@ -30,53 +30,28 @@ export interface GeminiEmbeddingOptions {
   batchSize?: number;
 }
 
+import { callGemini } from "./gemini";
+
 export async function generateChangelog(
   userPrompt: string,
   options: GeminiClientOptions & { language?: string } = {}
 ): Promise<ChangelogOutput> {
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Get a free one from Google AI Studio.");
+    throw new Error("GEMINI_API_KEY is not set.");
   }
 
-  const model = options.model ?? "gemini-flash-latest";
   const systemPrompt = options.systemPrompt ?? CHANGELOG_SYSTEM_PROMPT(options.language);
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: userPrompt }],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: options.temperature ?? 0.2,
-        },
-      }),
-    }
-  );
+  const resText = await callGemini({
+    apiKey,
+    prompt: userPrompt,
+    systemPrompt,
+    responseMimeType: "application/json",
+    temperature: options.temperature ?? 0.2,
+  });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API returned status ${response.status}: ${errorText}`);
-  }
-
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    throw new Error("Unexpected response from Gemini API");
-  }
-
-  const jsonText = rawText.replace(/```json\n?|\n?```/g, "").trim();
+  const jsonText = resText.replace(/```json\n?|\n?```/g, "").trim();
   return changelogOutputSchema.parse(JSON.parse(jsonText));
 }
 

@@ -8,25 +8,7 @@ import { githubAtomicWrite } from "@/lib/git-storage/github";
 const SOURCE_EXTS = /\.(ts|tsx|js|jsx|mjs|py|go|rs|rb|java|kt|swift|cs|cpp|c|h|vue|svelte)$/;
 const IGNORE_PATHS = /node_modules|\.next|dist|build|\.git|coverage|__pycache__|\.cache/;
 
-async function fetchRepoFilePaths(repoFull: string, token: string, branch: string): Promise<string[]> {
-  const [owner, name] = repoFull.split("/");
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${name}/git/trees/${branch}?recursive=1`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      cache: "no-store",
-    }
-  );
-  if (!res.ok) throw new Error(`GitHub tree fetch failed: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  return (data.tree as Array<{ path: string; type: string }>)
-    .filter(f => f.type === "blob" && !IGNORE_PATHS.test(f.path))
-    .map(f => f.path);
-}
+import { fetchRepoFilePaths } from "@/lib/github-api";
 
 function detectTechStack(paths: string[]) {
   const all = paths.join(" ");
@@ -60,11 +42,12 @@ function detectTechStack(paths: string[]) {
   return { languages, frameworks, databases, services, generated_at: new Date().toISOString() };
 }
 
+import { callGemini } from "@/lib/ai/gemini";
+
 async function buildModuleGraph(sourcePaths: string[], apiKey: string) {
   const capped = sourcePaths.slice(0, 80);
 
   const prompt = `You are analyzing a software repository. Given these source file paths, generate a module dependency graph.
-
 Source files:
 ${capped.map(p => `- ${p}`).join("\n")}
 
@@ -72,43 +55,21 @@ Return JSON with this exact shape:
 {
   "modules": [
     {
-      "id": "<unique short id, e.g. filename without extension>",
-      "name": "<human readable name>",
-      "path": "<exact file path from the list>",
-      "summary": "<one sentence describing what this module does>",
-      "dependencies": ["<id of other modules in this list that this one likely imports>"]
+      "id": "<id>", "name": "<name>", "path": "<path>", "summary": "...", "dependencies": []
     }
   ],
   "generated_at": "${new Date().toISOString()}"
-}
+}`;
 
-Rules:
-- Only include modules from the provided file list
-- Infer dependencies from naming conventions: api routes depend on lib files, components depend on lib/hooks, pages depend on components, index files re-export others
-- Keep dependency arrays short (2-5 entries max per module)
-- Return only valid JSON, no markdown`;
+  const resText = await callGemini({
+    apiKey,
+    prompt,
+    systemPrompt: "You are an expert software architect. Return only valid JSON, no markdown.",
+    responseMimeType: "application/json",
+    temperature: 0.1,
+  });
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini failed: ${res.status} ${errText}`);
-  }
-
-  const data = await res.json();
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!raw) throw new Error("Empty response from Gemini");
-  const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
+  const cleaned = resText.replace(/```json\n?|\n?```/g, "").trim();
   return JSON.parse(cleaned);
 }
 
@@ -149,10 +110,29 @@ export async function POST(
     const allPaths = await fetchRepoFilePaths(project.repo_full, token, branch);
     const sourcePaths = allPaths.filter(p => SOURCE_EXTS.test(p));
 
-    const [moduleGraph, techStack] = await Promise.all([
-      buildModuleGraph(sourcePaths, apiKey),
-      Promise.resolve(detectTechStack(allPaths)),
-    ]);
+    let moduleGraph;
+    let techStack = detectTechStack(allPaths);
+
+    try {
+      moduleGraph = await buildModuleGraph(sourcePaths, apiKey);
+    } catch (aiErr: any) {
+      console.warn("[scan] AI Scan failed, falling back to static graph:", aiErr.message);
+      // STATIC FALLBACK: Build a basic graph without AI
+      moduleGraph = {
+        modules: sourcePaths.slice(0, 50).map(p => {
+          const id = p.split("/").pop()?.split(".")[0] || p;
+          return {
+            id,
+            name: id.toUpperCase(),
+            path: p,
+            summary: "Source module detected via static scan.",
+            dependencies: []
+          };
+        }),
+        generated_at: new Date().toISOString(),
+        is_static: true
+      };
+    }
 
     const configCache = {
       ...((project.config_cache as object) || {}),

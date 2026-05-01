@@ -54,49 +54,59 @@ Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
     }
   }
 
-  const systemPrompt = `You are LYRA, the Librarian — a sharp, helpful AI agent embedded in RepoMind. You answer questions about this codebase with precision.
+  const isRefactorRequest = /fix|refactor|patch|bug|issue|optimize/i.test(message)
+  
+  const persona = isRefactorRequest 
+    ? {
+        name: "PATCH",
+        role: "the Mechanic — a pragmatic, code-focused agent who fixes bugs and refactors modules.",
+        extraRules: [
+          "- Focus on providing concrete code changes or diffs.",
+          "- Explain the *why* behind a refactor.",
+          "- Be direct and technical."
+        ]
+      }
+    : {
+        name: "LYRA",
+        role: "the Librarian — a sharp, helpful AI agent who explains codebase architecture and structure.",
+        extraRules: [
+          "- Explain high-level concepts and relationships.",
+          "- Be precise and concise.",
+          "- Help navigate the module graph."
+        ]
+      }
 
+  const systemPrompt = `You are ${persona.name}, ${persona.role}
+  
 ${configContext}
 ${techContext}
 ${moduleContext}
 
 Rules:
+${persona.extraRules.join("\n")}
 - Reference specific file paths and module names when relevant.
 - If you don't know, say so — don't guess.
-- Keep answers concise but complete.
 - Format code in markdown code blocks.`
 
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not set" }, { status: 500 })
 
-  const contents = [
-    ...history.map((h: { role: string; content: string }) => ({
-      role: h.role === "assistant" ? "model" : "user",
-      parts: [{ text: h.content }],
-    })),
-    { role: "user", parts: [{ text: message }] },
-  ]
+  const { callGemini } = await import("@/lib/ai/gemini")
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: { temperature: 0.3 },
-      }),
-    }
-  )
-
-  if (!res.ok) {
-    const err = await res.text()
-    return NextResponse.json({ error: `Gemini error: ${res.status} ${err}` }, { status: 500 })
+  try {
+    const reply = await callGemini({
+      apiKey,
+      prompt: message,
+      systemPrompt,
+      history: history.map((h: { role: string; content: string }) => ({
+        role: h.role === "assistant" ? "model" : "user",
+        parts: [{ text: h.content }],
+      })),
+      temperature: 0.3,
+    })
+    return NextResponse.json({ reply })
+  } catch (err: any) {
+    console.error("[Chat] Gemini call failed:", err.message)
+    return NextResponse.json({ error: err.message || "Failed to generate response" }, { status: 500 })
   }
-
-  const data = await res.json()
-  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "I couldn't generate a response."
-
-  return NextResponse.json({ reply })
 }

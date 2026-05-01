@@ -40,37 +40,15 @@ export async function decomposePlan(
     epicFormat: config?.tickets?.epic_format,
   });
 
-  const model = "gemini-flash-latest";
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.2,
-        },
-      }),
-    }
-  );
+  const { callGemini } = await import("./gemini");
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API returned status ${response.status}: ${errorText}`);
-  }
-
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    throw new Error("Unexpected response from Gemini API");
-  }
+  const rawText = await callGemini({
+    apiKey,
+    prompt,
+    systemPrompt: "You are an expert project manager. Return only valid JSON, no markdown.",
+    responseMimeType: "application/json",
+    temperature: 0.2,
+  });
 
   const jsonText = rawText.replace(/```json\n?|\n?```/g, "").trim();
   const parsed = JSON.parse(jsonText) as DecomposedPlan;

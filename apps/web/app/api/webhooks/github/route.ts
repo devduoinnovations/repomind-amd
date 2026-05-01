@@ -46,11 +46,25 @@ export async function POST(req: NextRequest) {
         payload: body,
         status: "pending",
       });
+
+      // Trigger immediate sync for "push" events if we have a token
+      if (event === "push" && project.github_token) {
+        const { GitHubRepoFileClient, syncTicketIndex } = await import("@/lib/git-storage");
+        const client = new GitHubRepoFileClient({
+          owner: body.repository.owner.login,
+          repo: body.repository.name,
+          token: project.github_token,
+          branch: body.ref?.replace("refs/heads/", "") || project.default_branch || "main",
+        });
+        
+        // Run sync in background (Vercel/Next.js might cut this off, but it's better than nothing for now)
+        syncTicketIndex(client).catch(err => console.error("[WebhookSync] Sync failed:", err));
+      }
     } catch (err) {
-      console.error("Failed to log webhook:", err);
+      console.error("Failed to process webhook:", err);
     }
 
-    return NextResponse.json({ message: "Event queued" });
+    return NextResponse.json({ message: "Event queued and sync triggered" });
   }
 
   return NextResponse.json({ message: "Event ignored" });

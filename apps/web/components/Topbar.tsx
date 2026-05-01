@@ -134,6 +134,39 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
       >
         +
       </button>
+      {selectedProject && (
+        <button
+          onClick={async () => {
+            const btn = document.getElementById('sync-btn');
+            if (btn) btn.style.opacity = '0.5';
+            try {
+              await fetch(`/api/projects/${selectedProject.id}/repomind/tickets`, { method: 'GET' });
+              window.location.reload(); // Simple way to refresh everything
+            } finally {
+              if (btn) btn.style.opacity = '1';
+            }
+          }}
+          id="sync-btn"
+          title="Sync with GitHub"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            background: 'var(--surface)',
+            color: 'var(--text-secondary)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            marginLeft: 8,
+          }}
+        >
+          SYNC
+        </button>
+      )}
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>

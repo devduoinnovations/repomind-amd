@@ -27,6 +27,9 @@
 | `components/OnboardingEmpty.tsx` | Create | Shown on dashboard when user has zero projects |
 | `app/page.tsx` | Modify | Show `OnboardingEmpty` when `projects.length === 0 && status === 'authenticated'` |
 | `components/NewProjectModal.tsx` | Modify | Add `isInitialising` state + progress steps for `.repomind` init |
+| `app/api/webhooks/github/route.ts` | Create | Handle `push` events to sync `.repomind` changes to Supabase |
+| `lib/git-storage/ticket.ts` | Modify | Add `saveTicketsToGit` helper |
+| `app/api/projects/[id]/tickets/sync/route.ts` | Create | Sync tickets from GitHub to Supabase |
 
 ---
 
@@ -1178,6 +1181,72 @@ Expected: clean build.
 git add apps/web/components/NewProjectModal.tsx apps/web/app/page.tsx
 git commit -m "feat: auto-trigger scout scan when new project is created with fresh .repomind"
 ```
+
+---
+
+## Phase 4 — Synchronization & Persistence
+
+### Task 11: SPARKY writes tickets to `.repomind/tickets/`
+
+After decomposing a plan, SPARKY should persist the tickets directly to Git so they are permanent and versioned.
+
+**Files:**
+- Modify: `apps/web/lib/git-storage/ticket.ts`
+- Modify: `apps/web/app/api/projects/[id]/repomind/plan/route.ts`
+
+- [ ] **Step 1: Add `saveTicketsToGit` helper**
+In `lib/git-storage/ticket.ts`, implement a function that takes the decomposed plan and writes individual YAML files.
+
+- [ ] **Step 2: Call persistence after decomposition**
+In `plan/route.ts`, after `decomposePlan()`, call the new helper to write the files to GitHub.
+
+---
+
+### Task 12: GitHub Webhook Handler — `/api/webhooks/github`
+
+Handle incoming `push` events to keep the local `config_cache` in sync with manual edits made directly on GitHub.
+
+**Files:**
+- Create: `apps/web/app/api/webhooks/github/route.ts`
+
+- [ ] **Step 1: Implement the POST handler**
+The handler should verify the signature, check if files in `.repomind/` were changed, and if so, trigger a re-scan or a re-sync of the config/tickets.
+
+---
+
+### Task 13: Ticket Loader — Sync GitHub tickets to Supabase
+
+Ensure the Kanban board reflects the true state of the repository.
+
+**Files:**
+- Create: `apps/web/app/api/projects/[id]/tickets/sync/route.ts`
+
+- [ ] **Step 1: Implement sync route**
+On GET: Fetch all files in `.repomind/tickets/`, parse them, and UPSERT into the Supabase `tickets` table.
+
+- [ ] **Step 2: Call sync on dashboard load**
+Ensure the UI calls this sync endpoint when a project is selected.
+
+---
+
+### Task 14: Real PATCH agent logic
+
+Fix the naming mismatch and give PATCH a real role, such as watching PRs or providing code-level feedback via the chat.
+
+- [ ] **Step 1: Update LYRA to delegate to PATCH**
+When a question is specifically about "fixing" or "refactoring" code, LYRA can invoke a PATCH-specific prompt that suggests actual code changes.
+
+---
+
+## Phase 5 — Robustness & UX Polish
+
+### Task 15: Error UX & Validation
+
+- [ ] **Step 1: YAML Validation**
+Update `loadRepomindContext` to return detailed error messages if YAML is broken, and show these in the UI.
+
+- [ ] **Step 2: Token Refresh Flow**
+Detect 401/403 errors from GitHub and show a "Session Expired - Reconnect" button.
 
 ---
 

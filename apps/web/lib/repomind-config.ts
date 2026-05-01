@@ -25,16 +25,29 @@ export async function loadRepomindContext(
 
   let config: RepoMindConfig
   try {
-    config = repomindConfigSchema.parse(parse(raw))
-  } catch {
+    const parsed = parse(raw)
+    config = repomindConfigSchema.parse(parsed)
+  } catch (err) {
+    console.error(`[loadRepomindContext] Config parse error for ${repoFull}:`, err)
+    // Return a default config if parsing fails? Or null to indicate "broken"?
+    // For now, return null but keep the error log.
     return null
   }
 
-  const modulesRaw = await readTextFile(repoFull, token, branch, MODULES_PATH)
-  const techRaw = await readTextFile(repoFull, token, branch, TECH_STACK_PATH)
+  const [modulesRaw, techRaw] = await Promise.all([
+    readTextFile(repoFull, token, branch, MODULES_PATH),
+    readTextFile(repoFull, token, branch, TECH_STACK_PATH)
+  ])
 
-  const moduleGraph = modulesRaw ? JSON.parse(modulesRaw) : null
-  const techStack = techRaw ? parse(techRaw) : null
+  let moduleGraph = null
+  if (modulesRaw) {
+    try { moduleGraph = JSON.parse(modulesRaw) } catch (e) { console.error("Modules JSON parse error:", e) }
+  }
+
+  let techStack = null
+  if (techRaw) {
+    try { techStack = parse(techRaw) } catch (e) { console.error("Tech stack YAML parse error:", e) }
+  }
 
   return { config, moduleGraph, techStack }
 }

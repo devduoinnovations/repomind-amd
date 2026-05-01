@@ -308,7 +308,7 @@ export default function App() {
 
               <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
 
-              <div style={{ flex: 1, minHeight: 0 }}>
+              <div key={tab} className="slideleft" style={{ flex: 1, minHeight: 0 }}>
                 {tab === 'Kanban' && (
                   <KanbanBoard
                     tickets={loadingTickets && tickets.length === 0 ? [] : tickets}

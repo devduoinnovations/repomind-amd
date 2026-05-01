@@ -51,11 +51,38 @@ export function ChatPanel({ projectId }: Props) {
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {messages.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, opacity: 0.6 }}>
-            <MascotSprite name="LYRA" state="idle" w={80} h={120} />
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
-              {projectId ? 'Ask LYRA anything about this codebase.' : 'Select a project first.'}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, opacity: 0.8 }}>
+            <MascotSprite name="LYRA" state="idle" w={100} h={150} />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: '#60a5fa', marginBottom: 4 }}>HELLO, DEVELOPER.</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>
+                {projectId ? 'I am LYRA. I have indexed your codebase.' : 'Select a project to begin our session.'}
+              </div>
             </div>
+            {projectId && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 400, marginTop: 8 }}>
+                {['How does auth work?', 'Explain the data flow', 'Where is the API logic?', 'Show me the project config'].map(q => (
+                  <button
+                    key={q}
+                    onClick={() => { setInput(q); }}
+                    style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      padding: '6px 12px',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 10,
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = '#60a5fa'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {messages.map((m, i) => (

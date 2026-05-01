@@ -16,10 +16,16 @@ export function AgentModal({ agentName, agents, onClose, selectedProjectId, onSc
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<{ moduleCount: number; fileCount: number } | null>(null)
+  const [clicked, setClicked] = useState(false)
 
   if (!a) return null
 
   const isScout = a.name === 'SCOUT'
+
+  const onMascotClick = () => {
+    setClicked(true)
+    setTimeout(() => setClicked(false), 300)
+  }
 
   async function runScan() {
     if (!selectedProjectId || scanning) return
@@ -59,7 +65,9 @@ export function AgentModal({ agentName, agents, onClose, selectedProjectId, onSc
         boxShadow: `var(--shadow-modal), 0 0 60px ${a.color}33`,
       }}>
         <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-          <MascotSprite name={a.name} state="idle" w={140} h={210} />
+          <div onClick={onMascotClick} style={{ cursor: 'pointer' }}>
+            <MascotSprite name={a.name} state="idle" w={140} h={210} clickEffect={clicked} />
+          </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 56, color: a.color, letterSpacing: '0.02em', lineHeight: 0.9 }}>{a.name}</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 4 }}>{a.role}</div>
