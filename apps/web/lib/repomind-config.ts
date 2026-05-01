@@ -1,8 +1,9 @@
+// apps/web/lib/repomind-config.ts
 import { parse } from "yaml"
-import { repomindConfigSchema, RepoMindConfig } from "./git-storage/schemas"
-import { readTextFile } from "./github-api"
-
+import { repomindConfigSchema, type RepoMindConfig } from "./git-storage/schemas"
 export type { RepoMindConfig }
+
+import { readTextFile } from "./github-api"
 
 export const CONFIG_PATH = ".repomind/config.yml"
 export const MODULES_PATH = ".repomind/architecture/modules.json"
