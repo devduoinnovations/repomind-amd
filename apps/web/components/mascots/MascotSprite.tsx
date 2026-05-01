@@ -13,16 +13,17 @@ const COLORS: Record<AgentName, string> = {
 interface Props {
   name: AgentName
   state: 'idle' | 'working'
+  clickEffect?: boolean
   w?: number
   h?: number
 }
 
-export function MascotSprite({ name, state, w = 80, h = 120 }: Props) {
+export function MascotSprite({ name, state, clickEffect, w = 80, h = 120 }: Props) {
   const working = state === 'working'
   const color = COLORS[name]
   return (
     <div
-      className={working ? 'sprite-working' : 'sprite-idle'}
+      className={`${working ? 'sprite-working' : 'sprite-idle'} ${clickEffect ? 'glitch' : ''}`}
       style={{
         width: w,
         height: h,

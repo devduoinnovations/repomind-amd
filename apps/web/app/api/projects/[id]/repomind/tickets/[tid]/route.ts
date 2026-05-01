@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
-  githubBatchWrite, readMarkdownWithFrontmatter, writeTicketMarkdown,
+  githubBatchWrite, readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter,
   GitHubRepoFileClient, updateTicketIndexEntries,
 } from "@/lib/git-storage";
 
@@ -77,24 +77,8 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
     };
 
-    const updatedContent = writeTicketMarkdown({
-      id: updatedFrontmatter.id,
-      epic: updatedFrontmatter.epic,
-      title: updatedFrontmatter.title,
-      description: markdownBody.split("\n## Acceptance Criteria")[0]
-        .replace("# " + updatedFrontmatter.title, "").trim()
-        .replace("\n## Description", "").trim(),
-      status: updatedFrontmatter.status,
-      priority: updatedFrontmatter.priority as any,
-      complexity: updatedFrontmatter.complexity as any,
-      acceptance_criteria: markdownBody.includes("## Acceptance Criteria")
-        ? markdownBody.split("## Acceptance Criteria")[1].split("##")[0].trim()
-            .split("\n").map((l: string) => l.replace("- [ ] ", "").replace("- [x] ", "").trim()).filter(Boolean)
-        : [],
-      linked_modules: updatedFrontmatter.tags || [],
-      created_at: updatedFrontmatter.created_at,
-      updated_at: updatedFrontmatter.updated_at,
-    });
+    // Preserve the existing body completely to avoid wiping out manual additions
+    const updatedContent = writeMarkdownWithFrontmatter(updatedFrontmatter, markdownBody);
 
     await githubBatchWrite(
       {

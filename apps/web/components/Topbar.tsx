@@ -18,7 +18,7 @@ interface Props {
   onAddProject: () => void
 }
 
-export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectProject }: Props) {
+export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectProject, onAddProject }: Props) {
   const [open, setOpen] = useState(false)
 
   const [owner, repo] = (selectedProject?.repo_full || 'select / project').split('/')
@@ -43,7 +43,8 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '0.06em', color: 'var(--text-primary)' }}>REPOMIND</div>
       </div>
 
-      {/* Project selector */}
+      {/* Project selector + add button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <div style={{ position: 'relative' }}>
         <div
           onClick={() => setOpen(o => !o)}
@@ -110,6 +111,62 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
             )}
           </div>
         )}
+      </div>
+      <button
+        onClick={onAddProject}
+        title="New project"
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 16,
+          background: 'var(--surface)',
+          color: 'var(--text-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: 6,
+          width: 28,
+          height: 28,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          flexShrink: 0,
+          lineHeight: 1,
+        }}
+      >
+        +
+      </button>
+      {selectedProject && (
+        <button
+          onClick={async () => {
+            const btn = document.getElementById('sync-btn');
+            if (btn) btn.style.opacity = '0.5';
+            try {
+              await fetch(`/api/projects/${selectedProject.id}/repomind/tickets`, { method: 'GET' });
+              window.location.reload(); // Simple way to refresh everything
+            } finally {
+              if (btn) btn.style.opacity = '1';
+            }
+          }}
+          id="sync-btn"
+          title="Sync with GitHub"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            background: 'var(--surface)',
+            color: 'var(--text-secondary)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            marginLeft: 8,
+          }}
+        >
+          SYNC
+        </button>
+      )}
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>

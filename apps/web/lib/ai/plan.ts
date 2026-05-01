@@ -1,4 +1,5 @@
-import { PLAN_DECOMPOSITION_PROMPT } from "./prompts";
+import { buildPlanDecompositionPrompt } from "./prompts";
+import { RepoMindConfig } from "@/lib/repomind-config";
 
 export interface DecomposedTask {
   id: string;
@@ -24,48 +25,30 @@ export interface DecomposedPlan {
 
 export async function decomposePlan(
   planText: string,
-  moduleGraph: any
+  moduleGraph: any,
+  config?: RepoMindConfig
 ): Promise<DecomposedPlan> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set.");
   }
 
-  const prompt = PLAN_DECOMPOSITION_PROMPT
-    .replace("{{planText}}", planText)
-    .replace("{{moduleGraph}}", JSON.stringify(moduleGraph, null, 2));
+  const prompt = buildPlanDecompositionPrompt(planText, moduleGraph, {
+    tone: config?.ai?.tone,
+    audience: config?.ai?.audience,
+    idFormat: config?.tickets?.id_format,
+    epicFormat: config?.tickets?.epic_format,
+  });
 
-  const model = "gemini-flash-latest";
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.2,
-        },
-      }),
-    }
-  );
+  const { callGemini } = await import("./gemini");
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API returned status ${response.status}: ${errorText}`);
-  }
-
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    throw new Error("Unexpected response from Gemini API");
-  }
+  const rawText = await callGemini({
+    apiKey,
+    prompt,
+    systemPrompt: "You are an expert project manager. Return only valid JSON, no markdown.",
+    responseMimeType: "application/json",
+    temperature: 0.2,
+  });
 
   const jsonText = rawText.replace(/```json\n?|\n?```/g, "").trim();
   const parsed = JSON.parse(jsonText) as DecomposedPlan;

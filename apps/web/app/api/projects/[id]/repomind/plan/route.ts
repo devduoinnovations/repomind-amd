@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { decomposePlan } from "@/lib/ai";
 import { githubBatchWrite, ticketFilePath, writeTicketMarkdown, GitHubRepoFileClient, rebuildTicketIndex } from "@/lib/git-storage";
+import { loadRepomindContext } from "@/lib/repomind-config";
 
 export async function POST(
   req: Request,
@@ -40,8 +41,22 @@ export async function POST(
     return NextResponse.json({ error: "Please scan your codebase first." }, { status: 400 });
   }
 
+  let repomindConfig = undefined
+  if (project.github_token) {
+    try {
+      const ctx = await loadRepomindContext(
+        project.repo_full,
+        project.github_token,
+        project.default_branch || "main"
+      )
+      if (ctx) repomindConfig = ctx.config
+    } catch {
+      // non-fatal
+    }
+  }
+
   try {
-    const decomposed = await decomposePlan(planText, moduleGraph);
+    const decomposed = await decomposePlan(planText, moduleGraph, repomindConfig);
 
     const files: Record<string, string> = {};
     const now = new Date().toISOString();

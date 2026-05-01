@@ -42,8 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`${bebasNeue.variable} ${syne.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      suppressHydrationWarning
     >
-      <body><Providers>{children}</Providers></body>
+      <body suppressHydrationWarning><Providers>{children}</Providers></body>
     </html>
   )
 }
