@@ -1,3 +1,5 @@
+// apps/web/lib/github-api.ts
+
 const GH_HEADERS = (token: string) => ({
   Authorization: `Bearer ${token}`,
   Accept: "application/vnd.github+json",
