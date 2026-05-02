@@ -62,6 +62,18 @@ export function SuggestionsPanel({ projectId, onApproved }: Props) {
     }
   }
 
+  const handleRunPatch = async () => {
+    if (!projectId || loading) return;
+    setLoading(true);
+    try {
+      await fetch(`/api/projects/${projectId}/repomind/suggestions/generate`, { method: 'POST' });
+      loadSuggestions();
+    } catch {
+      setError('PATCH scan failed');
+      setLoading(false);
+    }
+  };
+
   const handleReject = async (sid: string) => {
     if (!projectId || actioning) return
     setActioning(sid)
@@ -124,6 +136,18 @@ export function SuggestionsPanel({ projectId, onApproved }: Props) {
           }}
         >
           REFRESH
+        </button>
+        <button
+          onClick={handleRunPatch}
+          disabled={loading}
+          style={{
+            fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.06em',
+            background: 'rgba(20,184,166,0.2)', color: '#14b8a6',
+            border: '1px solid rgba(20,184,166,0.4)', padding: '6px 12px',
+            borderRadius: 6, cursor: loading ? 'default' : 'pointer', marginLeft: 8,
+          }}
+        >
+          RUN PATCH
         </button>
       </div>
 
