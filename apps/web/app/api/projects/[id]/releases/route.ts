@@ -46,3 +46,44 @@ export async function GET(
     return NextResponse.json({ error: "Failed to read releases" }, { status: 500 });
   }
 }
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id: projectId } = await params;
+  const { version, title, summary, entries = [] } = await req.json();
+  if (!version || !title) return NextResponse.json({ error: "version and title required" }, { status: 400 });
+
+  const { data: project } = await supabaseAdmin
+    .from("projects").select("*").eq("id", projectId).eq("user_id", session.user.id).single();
+  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const now = new Date().toISOString();
+  const releaseId = `release-${Date.now()}`;
+  const slug = version.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+
+  await supabaseAdmin.from("releases").insert({
+    id: releaseId, project_id: projectId, version, title, summary, entries, status: "draft", created_at: now,
+  });
+
+  const content = [
+    `---\nid: ${releaseId}\nversion: "${version}"\ntitle: "${title}"\nstatus: draft\ncreated_at: "${now}"\n---`,
+    `\n## ${title}\n\n${summary}\n`,
+    ...entries.map((e: { category: string; content: string }) => `- **[${e.category}]** ${e.content}`),
+  ].join("\n");
+
+  if (project.github_token) {
+    const { githubAtomicWrite } = await import("@/lib/git-storage/github");
+    await githubAtomicWrite(
+      { repoFull: project.repo_full, token: project.github_token, branch: project.default_branch || "main" },
+      { [`.repomind/releases/${slug}.md`]: content },
+      `chore(repomind): add release ${version}`
+    ).catch(() => {});
+  }
+
+  return NextResponse.json({ id: releaseId, version, title, status: "draft" });
+}

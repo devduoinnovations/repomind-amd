@@ -100,6 +100,14 @@ async function runPatchMatching(project: any, branch: string, commits: any[]) {
 }
 
 async function runChangelogGeneration(project: any, pr: any) {
-  // Implemented in Task 5 (Phase 2)
-  console.log("[webhook/pr] Changelog generation queued for PR:", pr.number);
+  const { createReleaseFromPR } = await import("@/lib/releases");
+  await createReleaseFromPR(
+    {
+      id: project.id,
+      repo_full: project.repo_full,
+      github_token: project.github_token,
+      default_branch: project.default_branch || "main",
+    },
+    pr
+  );
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { MascotSprite } from '@/components/mascots/MascotSprite'
 
 interface Release {
@@ -15,12 +15,72 @@ interface Props {
   projectId: string | null
 }
 
+const inputStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  background: 'var(--bg)',
+  color: 'var(--text-primary)',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+  padding: '6px 10px',
+  width: '100%',
+  boxSizing: 'border-box',
+  outline: 'none',
+}
+
+const primaryBtnStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  letterSpacing: '0.06em',
+  background: '#ec4899',
+  color: '#0a0a14',
+  border: 'none',
+  padding: '6px 14px',
+  borderRadius: 4,
+  cursor: 'pointer',
+}
+
+const cancelBtnStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  letterSpacing: '0.06em',
+  background: 'transparent',
+  color: 'var(--text-muted)',
+  border: '1px solid var(--border)',
+  padding: '6px 14px',
+  borderRadius: 4,
+  cursor: 'pointer',
+}
+
 export function ReleasesPanel({ projectId }: Props) {
   const [releases, setReleases] = useState<Release[]>([])
   const [loading, setLoading] = useState(false)
   const [publishing, setPublishing] = useState<string | null>(null)
   const [selected, setSelected] = useState<Release | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ version: '', title: '', summary: '' })
+  const [creating, setCreating] = useState(false)
+
+  const handleCreate = async () => {
+    if (!projectId || !form.version || !form.title) return
+    setCreating(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/releases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (res.ok) {
+        const r = await res.json()
+        setReleases(prev => [r, ...prev])
+        setShowForm(false)
+        setForm({ version: '', title: '', summary: '' })
+      }
+    } finally {
+      setCreating(false)
+    }
+  }
 
   useEffect(() => {
     if (!projectId) return
@@ -76,12 +136,70 @@ export function ReleasesPanel({ projectId }: Props) {
 
   if (releases.length === 0) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
         <MascotSprite name="NOVA" state="idle" w={160} h={240} />
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>NO RELEASES YET</div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
           NOVA will draft changelogs when PRs are merged
         </div>
+        <button
+          onClick={() => setShowForm(true)}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            letterSpacing: '0.08em',
+            background: 'transparent',
+            color: '#ec4899',
+            border: '1px solid #ec4899',
+            padding: '6px 14px',
+            borderRadius: 6,
+            cursor: 'pointer',
+          }}
+        >
+          + NEW RELEASE
+        </button>
+        {showForm && (
+          <div style={{
+            width: '100%',
+            maxWidth: 400,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+          }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ec4899', letterSpacing: '0.06em' }}>NEW RELEASE</div>
+            <input
+              placeholder="VERSION (e.g. v1.2.0)"
+              value={form.version}
+              onChange={e => setForm(f => ({ ...f, version: e.target.value }))}
+              style={inputStyle}
+            />
+            <input
+              placeholder="TITLE"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              style={inputStyle}
+            />
+            <textarea
+              placeholder="SUMMARY"
+              value={form.summary}
+              onChange={e => setForm(f => ({ ...f, summary: e.target.value }))}
+              rows={4}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleCreate} disabled={creating} style={primaryBtnStyle}>
+                {creating ? 'CREATING...' : 'CREATE'}
+              </button>
+              <button onClick={() => { setShowForm(false); setForm({ version: '', title: '', summary: '' }) }} style={cancelBtnStyle}>
+                CANCEL
+              </button>
+            </div>
+          </div>
+        )}
         {error && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ef4444' }}>{error}</div>}
       </div>
     )
@@ -91,10 +209,68 @@ export function ReleasesPanel({ projectId }: Props) {
     <div style={{ height: '100%', display: 'flex' }}>
       {/* List */}
       <div style={{ width: 260, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <MascotSprite name="NOVA" state="idle" w={24} h={36} />
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: '#ec4899', letterSpacing: '0.04em' }}>NOVA · RELEASES</div>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <MascotSprite name="NOVA" state="idle" w={24} h={36} />
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: '#ec4899', letterSpacing: '0.04em' }}>NOVA · RELEASES</div>
+          </div>
+          <button
+            onClick={() => setShowForm(v => !v)}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              letterSpacing: '0.06em',
+              background: 'transparent',
+              color: '#ec4899',
+              border: '1px solid #ec4899',
+              padding: '4px 10px',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
+          >
+            + NEW
+          </button>
         </div>
+        {showForm && (
+          <div style={{
+            padding: 16,
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--surface)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            flexShrink: 0,
+          }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#ec4899', letterSpacing: '0.06em' }}>NEW RELEASE</div>
+            <input
+              placeholder="VERSION (e.g. v1.2.0)"
+              value={form.version}
+              onChange={e => setForm(f => ({ ...f, version: e.target.value }))}
+              style={inputStyle}
+            />
+            <input
+              placeholder="TITLE"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              style={inputStyle}
+            />
+            <textarea
+              placeholder="SUMMARY"
+              value={form.summary}
+              onChange={e => setForm(f => ({ ...f, summary: e.target.value }))}
+              rows={3}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleCreate} disabled={creating} style={primaryBtnStyle}>
+                {creating ? 'CREATING...' : 'CREATE'}
+              </button>
+              <button onClick={() => { setShowForm(false); setForm({ version: '', title: '', summary: '' }) }} style={cancelBtnStyle}>
+                CANCEL
+              </button>
+            </div>
+          </div>
+        )}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {releases.map(r => (
             <div
