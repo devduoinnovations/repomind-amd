@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import { loadRepomindContext } from "@/lib/repomind-config"
+import { aiRateLimit, checkRateLimit } from "@/lib/rate-limit"
 
 export async function POST(
   req: Request,
@@ -11,6 +12,9 @@ export async function POST(
   const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const rateCheck = await checkRateLimit(aiRateLimit, session.user.id!)
+  if (!rateCheck.allowed) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
 
   const { message, history = [] } = await req.json()
   if (!message) return NextResponse.json({ error: "No message" }, { status: 400 })

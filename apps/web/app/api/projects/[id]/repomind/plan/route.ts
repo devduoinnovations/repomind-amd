@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { decomposePlan } from "@/lib/ai";
 import { githubBatchWrite, ticketFilePath, writeTicketMarkdown, GitHubRepoFileClient, rebuildTicketIndex } from "@/lib/git-storage";
 import { loadRepomindContext } from "@/lib/repomind-config";
+import { aiRateLimit, checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(
   req: Request,
@@ -16,6 +17,9 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateCheck = await checkRateLimit(aiRateLimit, session.user.id!);
+  if (!rateCheck.allowed) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
 
   const { planText } = await req.json();
 
