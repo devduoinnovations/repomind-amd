@@ -32,4 +32,17 @@ export async function saveSuggestions(
 
   const { error } = await supabaseAdmin.from("ai_suggestions").insert(rows);
   if (error) console.error("[suggestions] Failed to save:", error.message);
+
+  if (rows.length > 0) {
+    const { data: proj } = await supabaseAdmin
+      .from("projects").select("name, user_id").eq("id", projectId).single();
+    if (proj) {
+      const { data: owner } = await supabaseAdmin
+        .from("users").select("email").eq("id", proj.user_id).single();
+      if (owner?.email) {
+        const { sendSuggestionDigestEmail } = await import("@/lib/email");
+        sendSuggestionDigestEmail(owner.email, proj.name, rows.length).catch(() => {});
+      }
+    }
+  }
 }

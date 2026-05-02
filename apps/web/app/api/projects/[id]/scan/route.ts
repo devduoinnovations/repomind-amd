@@ -4,6 +4,7 @@ import { stringify } from "yaml";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { githubAtomicWrite } from "@/lib/git-storage/github";
+import { scanRateLimit, checkRateLimit } from "@/lib/rate-limit";
 
 const SOURCE_EXTS = /\.(ts|tsx|js|jsx|mjs|py|go|rs|rb|java|kt|swift|cs|cpp|c|h|vue|svelte)$/;
 const IGNORE_PATHS = /node_modules|\.next|dist|build|\.git|coverage|__pycache__|\.cache/;
@@ -82,6 +83,14 @@ export async function POST(
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rateCheck = await checkRateLimit(scanRateLimit, session.user.id!);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: `Rate limit exceeded. Try again in ${rateCheck.retryAfter}s.` },
+      { status: 429 }
+    );
   }
 
   const { data: project, error } = await supabaseAdmin
@@ -164,6 +173,12 @@ export async function POST(
       } catch (writeErr) {
         console.error("[scan] Failed to write back to .repomind:", writeErr);
       }
+    }
+
+    const { data: owner } = await supabaseAdmin.from("users").select("email, name").eq("id", session.user.id).single();
+    if (owner?.email) {
+      const { sendScanCompleteEmail } = await import("@/lib/email");
+      sendScanCompleteEmail(owner.email, project.name, moduleGraph.modules?.length ?? 0).catch(() => {});
     }
 
     return NextResponse.json({

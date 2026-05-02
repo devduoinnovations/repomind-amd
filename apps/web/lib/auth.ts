@@ -18,6 +18,9 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user }) {
       if (!user.email) return false;
 
+      const { data: existing } = await supabaseAdmin
+        .from("users").select("id").eq("id", user.id).single();
+
       const { error } = await supabaseAdmin.from("users").upsert(
         {
           id: user.id,
@@ -31,6 +34,11 @@ export const authOptions: NextAuthOptions = {
       if (error) {
         console.error("Error syncing user to Supabase:", error);
         return false;
+      }
+
+      if (!existing && user.email && user.name) {
+        const { sendWelcomeEmail } = await import("@/lib/email");
+        sendWelcomeEmail(user.email, user.name).catch(() => {});
       }
 
       return true;
