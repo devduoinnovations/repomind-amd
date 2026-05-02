@@ -17,9 +17,12 @@ import { SuggestionsPanel } from '@/components/SuggestionsPanel'
 import { NewProjectModal } from '@/components/NewProjectModal'
 import { TicketDetailModal } from '@/components/TicketDetailModal'
 import { OnboardingEmpty } from '@/components/OnboardingEmpty'
-
-const TABS = ['Kanban', 'Suggestions', 'Architecture', 'Releases', 'Q&A'] as const
-type Tab = typeof TABS[number]
+import { ProjectSettingsModal } from '@/components/ProjectSettingsModal'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { Sidebar } from '@/components/Sidebar'
+import type { SectionId } from '@/components/Sidebar'
+import { AgentWelcomeBanner } from '@/components/AgentWelcomeBanner'
+import type { WelcomeContext } from '@/components/AgentWelcomeBanner'
 
 interface Project {
   id: string
@@ -77,7 +80,7 @@ export default function App() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [feed, setFeed] = useState<ActivityEvent[]>([])
   const [metrics, setMetrics] = useState<AmdMetrics>(INITIAL_METRICS)
-  const [tab, setTab] = useState<Tab>('Kanban')
+  const [section, setSection] = useState<SectionId>('kanban')
   const [planOpen, setPlanOpen] = useState(false)
   const [planWorking, setPlanWorking] = useState(false)
   const [amdOpen, setAmdOpen] = useState(false)
@@ -87,6 +90,7 @@ export default function App() {
   const [suggestionCount, setSuggestionCount] = useState(0)
   const [newProjectOpen, setNewProjectOpen] = useState(false)
   const [ticketDetail, setTicketDetail] = useState<Ticket | null>(null)
+  const [projectSettingsOpen, setProjectSettingsOpen] = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login')
@@ -239,6 +243,22 @@ export default function App() {
 
   const gpuRounded = Math.round(metrics.gpu)
 
+  const SECTION_AGENTS: Partial<Record<SectionId, 'SPARKY'|'PATCH'|'SAGE'|'NOVA'|'LYRA'>> = {
+    kanban: 'SPARKY',
+    suggestions: 'PATCH',
+    architecture: 'SAGE',
+    releases: 'NOVA',
+    chat: 'LYRA',
+  }
+
+  const welcomeContext: WelcomeContext = {
+    ticketCount: tickets?.length ?? 0,
+    suggestionCount: suggestionCount ?? 0,
+    moduleCount: 0,
+    releaseCount: 0,
+    projectName: selectedProject?.name,
+  }
+
   if (status === 'loading' || status === 'unauthenticated') {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-muted)', background: 'var(--void)' }}>
@@ -256,6 +276,7 @@ export default function App() {
         selectedProject={selectedProject}
         onSelectProject={(p) => setSelectedProject(p)}
         onAddProject={() => setNewProjectOpen(true)}
+        onSettingsClick={() => setProjectSettingsOpen(true)}
       />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -267,26 +288,30 @@ export default function App() {
           onAmdClick={() => setAmdOpen(true)}
         />
 
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {!selectedProject && projects.length === 0 ? (
-            <OnboardingEmpty onAddProject={() => setNewProjectOpen(true)} />
-          ) : (
-            <>
-              {/* Tab bar */}
-              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--panel)', flexShrink: 0 }}>
-                <div className="tabs" style={{ display: 'flex' }}>
-                  {TABS.map(t => (
-                    <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>
-                      {t}
-                      {t === 'Suggestions' && suggestionCount > 0 && (
-                        <span style={{ marginLeft: 6, background: '#14b8a6', color: '#fff', borderRadius: 999, padding: '1px 6px', fontSize: 9, fontFamily: 'var(--font-mono)', verticalAlign: 'middle' }}>
-                          {suggestionCount}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ marginLeft: 'auto', padding: '0 16px' }}>
+        <div style={{ flex: 1, display: 'flex', minHeight: 0, minWidth: 0 }}>
+          <Sidebar
+            active={section}
+            onSelect={(id) => {
+              if (id === 'settings') { setProjectSettingsOpen(true); return }
+              setSection(id)
+            }}
+            suggestionCount={suggestionCount}
+          />
+
+          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            {!selectedProject && projects.length === 0 ? (
+              <OnboardingEmpty onAddProject={() => setNewProjectOpen(true)} />
+            ) : (
+              <>
+                {SECTION_AGENTS[section] && (
+                  <AgentWelcomeBanner
+                    agent={SECTION_AGENTS[section]!}
+                    context={welcomeContext}
+                  />
+                )}
+
+                {/* New Plan button bar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', borderBottom: '1px solid var(--border)', background: 'var(--panel)', flexShrink: 0, padding: '0 16px', height: 44 }}>
                   <button
                     onClick={() => setPlanOpen(true)}
                     style={{
@@ -304,27 +329,29 @@ export default function App() {
                     + New Plan
                   </button>
                 </div>
-              </div>
 
-              <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
+                <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
 
-              <div key={tab} className="slideleft" style={{ flex: 1, minHeight: 0 }}>
-                {tab === 'Kanban' && (
-                  <KanbanBoard
-                    tickets={loadingTickets && tickets.length === 0 ? [] : tickets}
-                    flashId={flashId}
-                    onStatusChange={onTicketStatusChange}
-                    onTicketClick={t => setTicketDetail(t)}
-                  />
-                )}
-                {tab === 'Suggestions' && <SuggestionsPanel projectId={selectedProject?.id ?? null} onApproved={() => loadTickets(selectedProject!.id)} />}
-                {tab === 'Architecture' && <ArchitecturePanel projectId={selectedProject?.id ?? null} />}
-                {tab === 'Releases' && <ReleasesPanel projectId={selectedProject?.id ?? null} />}
-                {tab === 'Q&A' && <ChatPanel projectId={selectedProject?.id ?? null} />}
-              </div>
-            </>
-          )}
-        </main>
+                <div key={section} className="slideleft" style={{ flex: 1, minHeight: 0 }}>
+                  {section === 'kanban' && (
+                    <ErrorBoundary>
+                      <KanbanBoard
+                        tickets={loadingTickets && tickets.length === 0 ? [] : tickets}
+                        flashId={flashId}
+                        onStatusChange={onTicketStatusChange}
+                        onTicketClick={t => setTicketDetail(t)}
+                      />
+                    </ErrorBoundary>
+                  )}
+                  {section === 'suggestions' && <ErrorBoundary><SuggestionsPanel projectId={selectedProject?.id ?? null} onApproved={() => loadTickets(selectedProject!.id)} /></ErrorBoundary>}
+                  {section === 'architecture' && <ErrorBoundary><ArchitecturePanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
+                  {section === 'releases' && <ErrorBoundary><ReleasesPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
+                  {section === 'chat' && <ErrorBoundary><ChatPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
+                </div>
+              </>
+            )}
+          </main>
+        </div>
       </div>
 
       <AmdMetricsPanel
@@ -358,6 +385,21 @@ export default function App() {
           onStatusChange={(id, status, path) => {
             onTicketStatusChange(id, status, path)
             setTicketDetail(null)
+          }}
+        />
+      )}
+
+      {projectSettingsOpen && selectedProject && (
+        <ProjectSettingsModal
+          project={selectedProject}
+          onClose={() => setProjectSettingsOpen(false)}
+          onUpdated={(p) => {
+            setProjects(ps => ps.map(x => x.id === p.id ? p : x))
+            setSelectedProject(p)
+          }}
+          onDeleted={() => {
+            setProjects(ps => ps.filter(x => x.id !== selectedProject.id))
+            setSelectedProject(null)
           }}
         />
       )}

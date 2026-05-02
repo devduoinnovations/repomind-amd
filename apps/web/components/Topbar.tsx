@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Project {
   id: string
@@ -16,10 +17,12 @@ interface Props {
   selectedProject: Project | null
   onSelectProject: (p: Project) => void
   onAddProject: () => void
+  onSettingsClick?: () => void
 }
 
-export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectProject, onAddProject }: Props) {
+export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectProject, onAddProject, onSettingsClick }: Props) {
   const [open, setOpen] = useState(false)
+  const router = useRouter()
 
   const [owner, repo] = (selectedProject?.repo_full || 'select / project').split('/')
 
@@ -167,6 +170,29 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
           SYNC
         </button>
       )}
+      {selectedProject && onSettingsClick && (
+        <button
+          onClick={onSettingsClick}
+          title="Project settings"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            width: 28,
+            height: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            color: 'var(--text-muted)',
+            fontSize: 14,
+            marginLeft: 4,
+          }}
+        >
+          ⚙
+        </button>
+      )}
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -186,6 +212,16 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
         >
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ed1c24', boxShadow: '0 0 8px #ed1c24' }} />
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em' }}>GPU {gpu}% · MI300X · ROCm</span>
+        </button>
+        <button
+          onClick={() => router.push('/settings')}
+          title="Settings"
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: 16, padding: '4px 8px',
+          }}
+        >
+          ⚙
         </button>
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#ec4899)', border: '1px solid var(--border-hover)' }} />
       </div>
