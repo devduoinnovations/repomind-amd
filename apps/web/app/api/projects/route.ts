@@ -11,13 +11,25 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { data: projects, error } = await supabaseAdmin
-    .from("projects")
-    .select("*")
-    .eq("user_id", session.user.id)
-    .order("created_at", { ascending: false })
+  // Fetch owned projects + projects where user is a member
+  const [{ data: owned }, { data: memberships }] = await Promise.all([
+    supabaseAdmin.from("projects").select("*").eq("user_id", session.user.id).order("created_at", { ascending: false }),
+    supabaseAdmin.from("project_members").select("project_id").eq("user_id", session.user.id),
+  ])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const memberProjectIds = (memberships ?? []).map((m: any) => m.project_id)
+  let sharedProjects: any[] = []
+  if (memberProjectIds.length > 0) {
+    const { data } = await supabaseAdmin.from("projects").select("*").in("id", memberProjectIds)
+    sharedProjects = data ?? []
+  }
+
+  const seen = new Set<string>()
+  const projects = [...(owned ?? []), ...sharedProjects].filter(p => {
+    if (seen.has(p.id)) return false
+    seen.add(p.id)
+    return true
+  })
   return NextResponse.json(projects)
 }
 
