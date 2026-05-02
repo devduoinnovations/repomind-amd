@@ -1,4 +1,4 @@
-import { generateChangelog } from "./index";
+import { callGemini } from "./gemini";
 
 export interface TicketMatch {
   ticketId: string;
@@ -27,9 +27,9 @@ export async function matchCommitToTickets(
 ): Promise<TicketMatch[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
+  if (candidates.length === 0) return [];
 
-  const prompt = `
-You are a RepoMind Intelligence Engine. Match the following Git commit to the most relevant engineering tickets.
+  const prompt = `You are a RepoMind Intelligence Engine. Match the following Git commit to the most relevant engineering tickets.
 
 COMMIT:
 Hash: ${commit.hash}
@@ -41,55 +41,30 @@ ${commit.diff.slice(0, 2000)}
 CANDIDATE TICKETS:
 ${candidates.map(t => `[${t.id}] ${t.title}: ${t.description.slice(0, 200)}`).join("\n---\n")}
 
-INSTRUCTIONS:
-1. Identify if this commit implements, fixes, or relates to any of the candidate tickets.
-2. For each match, provide a confidence score from 0.0 to 1.0.
-3. Suggest a status update based on the level of completion:
-   - If work has started or is ongoing, suggest 'in_progress'.
-   - If a significant part of the task is done but might need testing, suggest 'review'.
-   - If the commit message or diff indicates the task is fully implemented or fixed, suggest 'done'.
-4. Return a JSON array of matches.
-
-RESPONSE FORMAT (JSON ONLY):
+Return a JSON array of matches with confidence > 0.5 only:
 [
   {
     "ticketId": "T-001",
     "confidence": 0.95,
-    "reasoning": "Explicitly mentions JWT rotation which is the main task of T-001.",
+    "reasoning": "Commit message directly references this ticket's scope.",
     "suggestedStatus": "in_progress"
   }
 ]
-`;
+Respond with JSON only. Empty array if no strong matches.`;
 
-  const model = "gemini-flash-latest";
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.1,
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Gemini Matching API failed: ${error}`);
-  }
-
-  const data = await response.json();
-  const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawJson) return [];
+  const raw = await callGemini({
+    apiKey,
+    prompt,
+    systemPrompt: "You are an expert code reviewer. Return only valid JSON array, no markdown.",
+    responseMimeType: "application/json",
+    temperature: 0.1,
+  });
 
   try {
-    return JSON.parse(rawJson);
-  } catch (e) {
-    console.error("Failed to parse matching JSON", e);
+    const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
     return [];
   }
 }
