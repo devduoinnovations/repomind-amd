@@ -70,6 +70,7 @@ export function SuggestionsPanel({ projectId, onApproved }: Props) {
       loadSuggestions();
     } catch {
       setError('PATCH scan failed');
+    } finally {
       setLoading(false);
     }
   };
