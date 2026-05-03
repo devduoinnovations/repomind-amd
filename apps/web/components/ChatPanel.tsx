@@ -9,6 +9,12 @@ export function ChatPanel({ projectId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([
+    'What does this codebase do?',
+    'Explain the main data flow',
+    'Where is the API logic?',
+    'What are the key modules?',
+  ])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Load messages from localStorage when projectId changes
@@ -24,6 +30,28 @@ export function ChatPanel({ projectId }: Props) {
     } else {
       setMessages([])
     }
+  }, [projectId])
+
+  // Fetch architecture data and set suggested questions based on tech stack
+  useEffect(() => {
+    if (!projectId) return
+    fetch(`/api/projects/${projectId}/architecture`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const ts = data?.codebase?.tech_stack
+        if (!ts) return
+        const langs: string[] = ts.languages ?? []
+        const frameworks: string[] = ts.frameworks ?? []
+        const questions: string[] = []
+        if (frameworks.includes('Next.js') || frameworks.includes('React')) questions.push('How does routing work?')
+        if (langs.includes('Python')) questions.push('Where are the data models?')
+        if (frameworks.includes('FastAPI')) questions.push('What API endpoints exist?')
+        if (ts.databases?.includes('Supabase') || ts.databases?.includes('PostgreSQL/Prisma')) questions.push('How is the database structured?')
+        questions.push('What does this codebase do?')
+        questions.push('What are the key modules?')
+        setSuggestedQuestions(questions.slice(0, 4))
+      })
+      .catch(() => {})
   }, [projectId])
 
   // Save messages to localStorage whenever they change
@@ -84,7 +112,7 @@ export function ChatPanel({ projectId }: Props) {
             </div>
             {projectId && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 400, marginTop: 8 }}>
-                {['What does this codebase do?', 'Explain the main data flow', 'Where is the API logic?', 'What are the key modules?'].map(q => (
+                {suggestedQuestions.map(q => (
                   <button
                     key={q}
                     onClick={() => { setInput(q); }}
