@@ -25,6 +25,7 @@ export interface Ticket {
   confidence?: number
   path?: string
   description?: string
+  createdBy?: string
 }
 
 export interface ActivityEvent {

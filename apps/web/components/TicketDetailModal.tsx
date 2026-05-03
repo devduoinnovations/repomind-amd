@@ -179,7 +179,7 @@ export function TicketDetailModal({ ticket, onClose, onStatusChange }: Props) {
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Agent</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#f59e0b' }}>⚡ SPARKY</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#f59e0b' }}>⚡ {t.createdBy ?? 'SPARKY'}</div>
           </div>
           {t.confidence !== undefined && (
             <div>

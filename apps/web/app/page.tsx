@@ -43,6 +43,7 @@ interface RawTicket {
   created_at: string
   path?: string
   description?: string
+  created_by?: string
 }
 
 function mapTicket(t: RawTicket): Ticket {
@@ -71,6 +72,7 @@ function mapTicket(t: RawTicket): Ticket {
     age,
     ...(t.path ? { path: t.path } : {}),
     ...(t.description ? { description: t.description } : {}),
+    ...(t.created_by ? { createdBy: t.created_by } : {}),
   }
 }
 
