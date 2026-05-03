@@ -379,7 +379,7 @@ export default function App() {
         open={amdOpen}
         onClose={() => setAmdOpen(false)}
         metrics={{ ...metrics, gpu: gpuRounded }}
-        log={[]}
+        log={feed.slice(0, 10).map(e => ({ time: e.ago, msg: e.agent ? `${e.agent} ${e.detail ?? ''}`.trim() : e.text }))}
       />
 
       {agentModal && (
