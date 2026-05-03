@@ -211,7 +211,7 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
           }}
         >
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ed1c24', boxShadow: '0 0 8px #ed1c24' }} />
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em' }}>GPU {gpu}% · MI300X · ROCm</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em' }}>GPU {gpu}% · {process.env.NEXT_PUBLIC_GPU_MODEL ?? 'MI300X ROCm'}</span>
         </button>
         <button
           onClick={() => router.push('/settings')}

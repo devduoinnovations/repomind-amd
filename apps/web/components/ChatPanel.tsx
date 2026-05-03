@@ -84,7 +84,7 @@ export function ChatPanel({ projectId }: Props) {
             </div>
             {projectId && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 400, marginTop: 8 }}>
-                {['How does auth work?', 'Explain the data flow', 'Where is the API logic?', 'Show me the project config'].map(q => (
+                {['What does this codebase do?', 'Explain the main data flow', 'Where is the API logic?', 'What are the key modules?'].map(q => (
                   <button
                     key={q}
                     onClick={() => { setInput(q); }}
