@@ -50,6 +50,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No GitHub token. Please reconnect." }, { status: 401 })
   }
 
+  // Validate repo exists and is accessible
+  const repoCheckRes = await fetch(
+    `https://api.github.com/repos/${repoFull}`,
+    { headers: { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json" } }
+  )
+  if (!repoCheckRes.ok) {
+    return NextResponse.json(
+      { error: repoCheckRes.status === 404 ? "Repository not found or not accessible" : "Could not access repository" },
+      { status: 400 }
+    )
+  }
+
   // 1. Resolve default branch
   let defaultBranch = "main"
   try {

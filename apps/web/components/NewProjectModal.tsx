@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 
+type RepoOption = { full_name: string; name: string; private: boolean; default_branch: string }
+
 interface Project {
   id: string
   name: string
@@ -23,8 +25,22 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
   const [repo, setRepo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [repos, setRepos] = useState<RepoOption[]>([])
+  const [reposLoading, setReposLoading] = useState(false)
+  const [repoSearch, setRepoSearch] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
 
   const slug = slugify(name)
+
+  const loadRepos = async () => {
+    if (repos.length > 0) return // already loaded
+    setReposLoading(true)
+    try {
+      const res = await fetch('/api/github/repos')
+      if (res.ok) setRepos(await res.json())
+    } catch {}
+    setReposLoading(false)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -106,14 +122,16 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
             )}
           </div>
 
-          <div>
+          <div style={{ position: 'relative' }}>
             <label style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
               GitHub Repo
             </label>
             <input
-              value={repo}
-              onChange={e => setRepo(e.target.value)}
-              placeholder="owner/repo"
+              value={repoSearch}
+              onChange={e => { setRepoSearch(e.target.value); setRepo(e.target.value); setShowDropdown(true) }}
+              onFocus={() => { loadRepos(); setShowDropdown(true) }}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+              placeholder="owner/repo or search…"
               style={{
                 width: '100%',
                 background: 'var(--void)',
@@ -127,6 +145,54 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
                 boxSizing: 'border-box',
               }}
             />
+            {showDropdown && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 8,
+                maxHeight: 200, overflowY: 'auto', marginTop: 4,
+              }}>
+                {reposLoading && (
+                  <div style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>
+                    Loading repos…
+                  </div>
+                )}
+                {!reposLoading && repos.length === 0 && (
+                  <div style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>
+                    No repos found. Type owner/repo manually.
+                  </div>
+                )}
+                {repos
+                  .filter(r => !repoSearch || r.full_name.toLowerCase().includes(repoSearch.toLowerCase()))
+                  .slice(0, 20)
+                  .map(r => (
+                    <button
+                      key={r.full_name}
+                      type="button"
+                      onMouseDown={() => {
+                        setRepo(r.full_name)
+                        setRepoSearch(r.full_name)
+                        setShowDropdown(false)
+                      }}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '8px 12px',
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        borderBottom: '1px solid var(--border)',
+                      }}
+                    >
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)', flex: 1 }}>
+                        {r.full_name}
+                      </span>
+                      {r.private && (
+                        <span style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 3 }}>
+                          private
+                        </span>
+                      )}
+                    </button>
+                  ))
+                }
+              </div>
+            )}
           </div>
 
           {error && (
