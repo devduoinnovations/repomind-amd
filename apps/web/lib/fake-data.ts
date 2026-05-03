@@ -2,7 +2,7 @@ import type { AgentState, AmdMetrics, LogEntry } from './types'
 
 export const INITIAL_AGENTS: AgentState[] = [
   { name: 'SPARKY', color: '#f59e0b', status: 'idle',    role: 'The Architect',    model: 'opus-4-6',    isAmd: false, voiceLine: 'Plans become tickets become commits become history.' },
-  { name: 'PATCH',  color: '#14b8a6', status: 'working', role: 'The Watcher',      model: 'mistral-7b',  isAmd: true,  voiceLine: "I didn't ask. I just knew." },
+  { name: 'PATCH',  color: '#14b8a6', status: 'idle', role: 'The Watcher',      model: 'mistral-7b',  isAmd: true,  voiceLine: "I didn't ask. I just knew." },
   { name: 'SAGE',   color: '#8b5cf6', status: 'idle',    role: 'The Cartographer', model: 'sonnet-4-6',  isAmd: true,  voiceLine: 'Every codebase is a city. I draw the map.' },
   { name: 'NOVA',   color: '#ec4899', status: 'idle',    role: 'The Herald',       model: 'opus-4-6',    isAmd: false, voiceLine: 'Ship something. I will tell the world.' },
   { name: 'LYRA',   color: '#60a5fa', status: 'idle',    role: 'The Librarian',    model: 'sonnet-4-6',  isAmd: true,  voiceLine: 'Ask anything. The answer is in the source.' },

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import type { AgentState, AgentName, Ticket, ActivityEvent, AmdMetrics } from '@/lib/types'
-import { INITIAL_AGENTS, INITIAL_METRICS, INITIAL_LOG } from '@/lib/fake-data'
+import { INITIAL_AGENTS } from '@/lib/fake-data'
 import { Topbar } from '@/components/Topbar'
 import { CrewPanel } from '@/components/CrewPanel'
 import { KanbanBoard } from '@/components/KanbanBoard'
@@ -80,7 +80,7 @@ export default function App() {
   const [agents, setAgents] = useState<AgentState[]>(INITIAL_AGENTS)
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [feed, setFeed] = useState<ActivityEvent[]>([])
-  const [metrics, setMetrics] = useState<AmdMetrics>(INITIAL_METRICS)
+  const [metrics, setMetrics] = useState<AmdMetrics>({ gpu: 0, mem: 0, tokSec: 0, embedMs: 0 })
   const [section, setSection] = useState<SectionId>('kanban')
   const [planOpen, setPlanOpen] = useState(false)
   const [planWorking, setPlanWorking] = useState(false)
@@ -162,33 +162,6 @@ export default function App() {
     loadTickets(selectedProject.id)
     loadSuggestions(selectedProject.id)
   }, [selectedProject, loadTickets, loadSuggestions])
-
-  // AMD metrics jitter
-  useEffect(() => {
-    const id = setInterval(() => {
-      setMetrics(m => ({
-        gpu:     Math.max(20, Math.min(95, m.gpu     + (Math.random() * 12 - 6))),
-        mem:     Math.max(40, Math.min(75, m.mem     + (Math.random() * 4  - 2))),
-        tokSec:  Math.max(1800, Math.min(3400, m.tokSec + Math.round(Math.random() * 200 - 100))),
-        embedMs: Math.max(8,    Math.min(20,   m.embedMs + Math.round(Math.random() * 4   - 2))),
-      }))
-    }, 1400)
-    return () => clearInterval(id)
-  }, [])
-
-  // PATCH commit flash (simulated if no real project)
-  useEffect(() => {
-    if (selectedProject || tickets.length === 0) return
-    const id = setInterval(() => {
-      if (tickets.length === 0) return
-      const tid = tickets[Math.floor(Math.random() * Math.min(3, tickets.length))]?.id
-      if (!tid) return
-      setFlashId(tid)
-      setAgents(a => a.map(x => x.name === 'PATCH' ? { ...x, status: 'working' } : x))
-      setTimeout(() => setFlashId(null), 1500)
-    }, 6000)
-    return () => clearInterval(id)
-  }, [selectedProject, tickets])
 
   const setAgent = (name: AgentName, status: AgentState['status']) =>
     setAgents(a => a.map(x => x.name === name ? { ...x, status } : x))
@@ -393,7 +366,7 @@ export default function App() {
         open={amdOpen}
         onClose={() => setAmdOpen(false)}
         metrics={{ ...metrics, gpu: gpuRounded }}
-        log={INITIAL_LOG}
+        log={[]}
       />
 
       {agentModal && (
