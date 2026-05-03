@@ -151,7 +151,7 @@ export default function App() {
       setSuggestionCount(count)
       if (count > 0) {
         setFeed(f => [
-          { color: '#14b8a6', text: `PATCH found <span style="color:#14b8a6">${count} pending suggestions</span>`, ago: 'now' },
+          { color: '#14b8a6', text: `PATCH found ${count} pending suggestions`, agent: 'PATCH', detail: `found ${count} pending suggestions`, ago: 'now' },
           ...f.filter(x => !x.text.includes('PATCH found')),
         ])
         setAgents(a => a.map(x => x.name === 'PATCH' ? { ...x, status: 'done' } : x))
@@ -174,7 +174,7 @@ export default function App() {
       setPlanWorking(true)
       setAgent('SPARKY', 'working')
       setTimeout(() => {
-        setFeed(f => [{ color: '#f59e0b', text: 'SPARKY <span style="color:#fbbf24">needs a project selected</span>', ago: 'now' }, ...f])
+        setFeed(f => [{ color: '#f59e0b', text: 'SPARKY needs a project selected', agent: 'SPARKY', detail: 'needs a project selected', ago: 'now' }, ...f])
         setAgent('SPARKY', 'idle')
         setPlanWorking(false)
         setPlanOpen(false)
@@ -184,7 +184,7 @@ export default function App() {
 
     setPlanWorking(true)
     setAgent('SPARKY', 'working')
-    setFeed(f => [{ color: '#f59e0b', text: 'SPARKY <span style="color:#fbbf24">decomposing plan...</span>', ago: 'now' }, ...f])
+    setFeed(f => [{ color: '#f59e0b', text: 'SPARKY decomposing plan...', agent: 'SPARKY', detail: 'decomposing plan...', ago: 'now' }, ...f])
 
     try {
       const res = await fetch(`/api/projects/${selectedProject.id}/repomind/plan`, {
@@ -197,7 +197,7 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || 'Failed')
 
       setFeed(f => [
-        { color: '#f59e0b', text: `SPARKY <span style="color:#fbbf24">created ${data.ticketCount} tickets</span>`, ago: 'now' },
+        { color: '#f59e0b', text: `SPARKY created ${data.ticketCount} tickets`, agent: 'SPARKY', detail: `created ${data.ticketCount} tickets`, ago: 'now' },
         ...f,
       ])
       setAgent('SPARKY', 'done')
@@ -206,7 +206,7 @@ export default function App() {
       // Reload tickets
       await loadTickets(selectedProject.id)
     } catch (err: any) {
-      setFeed(f => [{ color: '#ef4444', text: `SPARKY <span style="color:#ef4444">error: ${err.message}</span>`, ago: 'now' }, ...f])
+      setFeed(f => [{ color: '#ef4444', text: `SPARKY error: ${err.message}`, agent: 'SPARKY', detail: `error: ${err.message}`, ago: 'now' }, ...f])
       setAgent('SPARKY', 'error')
       setTimeout(() => setAgent('SPARKY', 'idle'), 2000)
     } finally {
@@ -382,7 +382,7 @@ export default function App() {
           onScanComplete={(result) => {
             setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))
             setFeed(f => [
-              { color: '#60a5fa', text: `SCOUT <span style="color:#60a5fa">indexed ${result.moduleCount} modules from ${result.fileCount} files</span>`, ago: 'now' },
+              { color: '#60a5fa', text: `SCOUT indexed ${result.moduleCount} modules from ${result.fileCount} files`, agent: 'SCOUT', detail: `indexed ${result.moduleCount} modules from ${result.fileCount} files`, ago: 'now' },
               ...f,
             ])
             setTimeout(() => setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'idle' } : x)), 3000)
@@ -426,13 +426,13 @@ export default function App() {
             if ((project as any)._initialised) {
               setTimeout(async () => {
                 setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'working' } : x))
-                setFeed(f => [{ color: '#22c55e', text: 'SCOUT <span style="color:#22c55e">scanning new repo…</span>', ago: 'now' }, ...f])
+                setFeed(f => [{ color: '#22c55e', text: 'SCOUT scanning new repo…', agent: 'SCOUT', detail: 'scanning new repo…', ago: 'now' }, ...f])
                 try {
                   const res = await fetch(`/api/projects/${project.id}/scan`, { method: 'POST' })
                   const data = await res.json()
                   if (res.ok) {
                     setFeed(f => [
-                      { color: '#22c55e', text: `SCOUT <span style="color:#22c55e">indexed ${data.moduleCount} modules</span>`, ago: 'now' },
+                      { color: '#22c55e', text: `SCOUT indexed ${data.moduleCount} modules`, agent: 'SCOUT', detail: `indexed ${data.moduleCount} modules`, ago: 'now' },
                       ...f,
                     ])
                     setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))

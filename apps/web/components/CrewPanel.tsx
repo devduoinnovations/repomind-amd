@@ -51,10 +51,12 @@ export function CrewPanel({ agents, amdMetrics, activityFeed, onAgentClick, onAm
           {activityFeed.slice(0, 5).map((e, i) => (
             <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: e.color, marginTop: 5, flexShrink: 0, boxShadow: i === 0 ? `0 0 6px ${e.color}` : 'none' }} />
-              <span
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-primary)', flex: 1, lineHeight: 1.4 }}
-                dangerouslySetInnerHTML={{ __html: e.text }}
-              />
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-primary)', flex: 1, lineHeight: 1.4 }}>
+                {e.agent
+                  ? <><span style={{ color: e.color }}>{e.agent}</span> {e.detail}</>
+                  : e.text
+                }
+              </span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)' }}>{e.ago}</span>
             </div>
           ))}

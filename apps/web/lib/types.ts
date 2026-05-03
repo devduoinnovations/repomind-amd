@@ -29,7 +29,9 @@ export interface Ticket {
 
 export interface ActivityEvent {
   color: string
-  text: string
+  text: string        // keep for backward compat, used as fallback
+  agent?: string      // e.g. "PATCH"
+  detail?: string     // e.g. "found 5 pending suggestions"
   ago: string
 }
 
