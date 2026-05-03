@@ -1,5 +1,9 @@
 'use client'
-import type { Ticket, Priority, Complexity } from '@/lib/types'
+import type { Ticket } from '@/lib/types'
+
+const PRIORITY_COLORS: Record<string, string> = { HIGH: '#ef4444', MED: '#f59e0b', LOW: '#22c55e' }
+const COMPLEXITY_BG: Record<string, string>    = { S: 'rgba(34,197,94,0.15)', M: 'rgba(96,165,250,0.15)', L: 'rgba(245,158,11,0.15)', XL: 'rgba(239,68,68,0.15)' }
+const COMPLEXITY_COLOR: Record<string, string> = { S: '#22c55e', M: '#60a5fa', L: '#f59e0b', XL: '#ef4444' }
 
 interface Props {
   ticket: Ticket
@@ -7,68 +11,47 @@ interface Props {
 }
 
 export function TicketCard({ ticket, flash }: Props) {
-  const t = ticket
   return (
     <div style={{
-      background: 'var(--surface)',
-      border: `1px solid ${flash ? 'rgba(20,184,166,0.6)' : 'var(--border)'}`,
-      borderRadius: 10,
-      padding: 12,
-      marginBottom: 8,
-      boxShadow: flash ? '0 0 24px rgba(20,184,166,0.4)' : 'none',
-      transition: 'all 400ms var(--ease-snap)',
+      background: flash ? 'rgba(96,165,250,0.08)' : 'var(--surface)',
+      border: `1px solid ${flash ? 'rgba(96,165,250,0.3)' : 'var(--border)'}`,
+      borderLeft: `3px solid ${PRIORITY_COLORS[ticket.priority] ?? '#64748b'}`,
+      borderRadius: 6, padding: '10px 12px',
+      transition: 'all 0.15s', marginBottom: 6,
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>{t.id}</span>
-        <PriorityPill p={t.priority} />
-      </div>
-      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: 10 }}>{t.title}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: t.commit ? 8 : 0 }}>
-        <ComplexityBar c={t.complexity} />
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)' }}>{t.complexity}</span>
-        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 9, color: '#f59e0b' }}>⚡ SPARKY</span>
-      </div>
-      {t.commit && (
-        <div style={{
-          background: 'rgba(20,184,166,0.08)',
-          border: '1px solid rgba(20,184,166,0.25)',
-          borderRadius: 6,
-          padding: '5px 8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          animation: flash ? 'slidein 400ms var(--ease-snap)' : 'none',
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, marginBottom: 6 }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
+          {ticket.id}
+        </span>
+        <span style={{
+          fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--font-mono)',
+          background: COMPLEXITY_BG[ticket.complexity] ?? 'transparent',
+          color: COMPLEXITY_COLOR[ticket.complexity] ?? 'var(--text-muted)',
         }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#5eead4' }}>{t.commit}</span>
-          <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)' }}>conf {t.confidence} 🔍</span>
-        </div>
-      )}
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 6 }}>{t.age}</div>
+          {ticket.complexity}
+        </span>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', lineHeight: 1.4, marginBottom: 6 }}>
+        {ticket.title}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{
+          fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--font-mono)',
+          background: `rgba(${priorityRgb(ticket.priority)},0.12)`,
+          color: PRIORITY_COLORS[ticket.priority] ?? 'var(--text-muted)',
+        }}>
+          {ticket.priority}
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          {ticket.age}
+        </span>
+      </div>
     </div>
   )
 }
 
-function PriorityPill({ p }: { p: Priority }) {
-  const map: Record<Priority, { bg: string; fg: string; g: string }> = {
-    HIGH: { bg: 'rgba(239,68,68,0.15)',  fg: '#ef4444',           g: '↑' },
-    MED:  { bg: 'rgba(245,158,11,0.15)', fg: '#f59e0b',           g: '' },
-    LOW:  { bg: 'rgba(78,75,106,0.3)',   fg: 'var(--text-muted)', g: '↓' },
-  }
-  const s = map[p]
-  return (
-    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.08em', background: s.bg, color: s.fg, padding: '2px 7px', borderRadius: 999 }}>
-      {p} {s.g}
-    </span>
-  )
-}
-
-function ComplexityBar({ c }: { c: Complexity }) {
-  const filled = { S: 1, M: 2, L: 3, XL: 4 }[c] ?? 1
-  return (
-    <div style={{ display: 'flex', gap: 2 }}>
-      {[0, 1, 2, 3].map(i => (
-        <span key={i} style={{ width: 12, height: 5, background: i < filled ? '#f59e0b' : 'rgba(245,158,11,0.25)', borderRadius: 1 }} />
-      ))}
-    </div>
-  )
+function priorityRgb(p: string): string {
+  if (p === 'HIGH') return '239,68,68'
+  if (p === 'MED')  return '245,158,11'
+  return '34,197,94'
 }

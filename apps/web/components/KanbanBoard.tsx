@@ -87,10 +87,18 @@ function DraggableTicket({ ticket, flash, onClick }: { ticket: Ticket; flash: bo
 
 export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick }: Props) {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
+  const [filterPriority, setFilterPriority] = useState<string>('ALL')
+  const [filterComplexity, setFilterComplexity] = useState<string>('ALL')
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
+  const filtered = tickets.filter(t => {
+    if (filterPriority !== 'ALL' && t.priority !== filterPriority) return false
+    if (filterComplexity !== 'ALL' && t.complexity !== filterComplexity) return false
+    return true
+  })
+
   const grouped = COLS.reduce<Record<TicketStatus, Ticket[]>>(
-    (acc, c) => ({ ...acc, [c]: tickets.filter(t => t.status === c) }),
+    (acc, c) => ({ ...acc, [c]: filtered.filter(t => t.status === c) }),
     {} as Record<TicketStatus, Ticket[]>
   )
 
@@ -112,10 +120,39 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick }:
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTicket(null)}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, padding: 20, height: '100%', overflow: 'auto' }}>
-        {COLS.map(col => (
-          <DroppableColumn key={col} col={col} tickets={grouped[col]} flashId={flashId} onTicketClick={onTicketClick} />
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* filter bar */}
+        <div style={{ padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--panel)' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>PRIORITY:</span>
+          {['ALL', 'HIGH', 'MED', 'LOW'].map(p => (
+            <button key={p} onClick={() => setFilterPriority(p)} style={{
+              fontSize: 10, padding: '3px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)',
+              background: filterPriority === p ? 'rgba(96,165,250,0.2)' : 'transparent',
+              color: filterPriority === p ? '#60a5fa' : 'var(--text-muted)',
+              border: `1px solid ${filterPriority === p ? 'rgba(96,165,250,0.4)' : 'var(--border)'}`,
+              cursor: 'pointer',
+            }}>{p}</button>
+          ))}
+          <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>SIZE:</span>
+          {['ALL', 'S', 'M', 'L', 'XL'].map(c => (
+            <button key={c} onClick={() => setFilterComplexity(c)} style={{
+              fontSize: 10, padding: '3px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)',
+              background: filterComplexity === c ? 'rgba(139,92,246,0.2)' : 'transparent',
+              color: filterComplexity === c ? '#8b5cf6' : 'var(--text-muted)',
+              border: `1px solid ${filterComplexity === c ? 'rgba(139,92,246,0.4)' : 'var(--border)'}`,
+              cursor: 'pointer',
+            }}>{c}</button>
+          ))}
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            {filtered.length} / {tickets.length} tickets
+          </span>
+        </div>
+        {/* kanban columns */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, padding: 20, flex: 1, overflow: 'auto' }}>
+          {COLS.map(col => (
+            <DroppableColumn key={col} col={col} tickets={grouped[col]} flashId={flashId} onTicketClick={onTicketClick} />
+          ))}
+        </div>
       </div>
       <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
         {activeTicket ? <TicketCard ticket={activeTicket} flash={false} /> : null}
