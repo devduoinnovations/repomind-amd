@@ -200,7 +200,7 @@ export function TicketDetailModal({ ticket, onClose, onStatusChange }: Props) {
             <div style={{ display: 'flex', gap: 8 }}>
               {prevStatus && (
                 <button
-                  onClick={() => { onStatusChange(t.id, prevStatus, (t as any).path); onClose() }}
+                  onClick={() => { onStatusChange(t.id, prevStatus, t.path); onClose() }}
                   style={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: 11,
@@ -217,7 +217,7 @@ export function TicketDetailModal({ ticket, onClose, onStatusChange }: Props) {
               )}
               {nextStatus && (
                 <button
-                  onClick={() => { onStatusChange(t.id, nextStatus, (t as any).path); onClose() }}
+                  onClick={() => { onStatusChange(t.id, nextStatus, t.path); onClose() }}
                   style={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: 11,

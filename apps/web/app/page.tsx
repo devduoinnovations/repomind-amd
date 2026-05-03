@@ -41,6 +41,7 @@ interface RawTicket {
   complexity: string
   created_at: string
   path?: string
+  description?: string
 }
 
 function mapTicket(t: RawTicket): Ticket {
@@ -67,7 +68,8 @@ function mapTicket(t: RawTicket): Ticket {
     priority: priorityMap[t.priority?.toLowerCase()] ?? 'MED',
     complexity: complexityMap[t.complexity?.toLowerCase()] ?? 'M',
     age,
-    ...(t.path ? { path: t.path } as any : {}),
+    ...(t.path ? { path: t.path } : {}),
+    ...(t.description ? { description: t.description } : {}),
   }
 }
 

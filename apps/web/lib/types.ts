@@ -23,6 +23,8 @@ export interface Ticket {
   age: string
   commit?: string
   confidence?: number
+  path?: string
+  description?: string
 }
 
 export interface ActivityEvent {
