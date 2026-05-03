@@ -36,7 +36,7 @@ export async function POST(
 
   // Use last 3 commits from GitHub
   const commitsRes = await fetch(
-    `https://api.github.com/repos/${project.repo_full}/commits?sha=${branch}&per_page=3`,
+    `https://api.github.com/repos/${project.repo_full}/commits?sha=${branch}&per_page=15`,
     { headers: { Authorization: `Bearer ${project.github_token}`, Accept: "application/vnd.github+json" } }
   );
   const commits = commitsRes.ok ? await commitsRes.json() : [];
@@ -45,7 +45,7 @@ export async function POST(
   openTickets.forEach((t: any) => { if (t.path) ticketPaths[t.id] = t.path; });
 
   let totalGenerated = 0;
-  for (const commit of commits.slice(0, 3)) {
+  for (const commit of commits.slice(0, 15)) {
     const matches = await matchCommitToTickets(
       {
         hash: commit.sha,
