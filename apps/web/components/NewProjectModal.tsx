@@ -29,6 +29,7 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
   const [reposLoading, setReposLoading] = useState(false)
   const [repoSearch, setRepoSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
+  const [tokenWarning, setTokenWarning] = useState(false)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -65,6 +66,15 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create project')
+
+      // Check if project has no GitHub token
+      if (!data.github_token) {
+        setTokenWarning(true)
+        setLoading(false)
+        setTimeout(() => { setTokenWarning(false); onCreated(data) }, 3000)
+        return
+      }
+
       onCreated(data)
     } catch (err: any) {
       setError(err.message)
@@ -200,6 +210,12 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
               </div>
             )}
           </div>
+
+          {tokenWarning && (
+            <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 6, padding: '10px 14px', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#f59e0b' }}>
+              ⚠ No GitHub token found. Re-authenticate or add a token in Settings to enable scans and suggestions.
+            </div>
+          )}
 
           {error && (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ef4444' }}>{error}</div>
