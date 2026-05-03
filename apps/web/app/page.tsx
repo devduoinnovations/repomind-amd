@@ -358,6 +358,7 @@ export default function App() {
                         onTicketClick={t => setTicketDetail(t)}
                         projectId={selectedProject?.id ?? null}
                         onTicketCreated={() => selectedProject && loadTickets(selectedProject.id)}
+                        loading={loadingTickets}
                       />
                     </ErrorBoundary>
                   )}

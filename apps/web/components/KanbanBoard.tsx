@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -21,6 +21,7 @@ interface Props {
   onTicketClick?: (ticket: Ticket) => void
   projectId?: string | null
   onTicketCreated?: () => void
+  loading?: boolean
 }
 
 const COLS: TicketStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
@@ -33,7 +34,7 @@ const COL_COLOR: Record<TicketStatus, string> = {
   DONE:        '#22c55e',
 }
 
-function DroppableColumn({ col, tickets, flashId, onTicketClick }: { col: TicketStatus; tickets: Ticket[]; flashId: string | null; onTicketClick?: (t: Ticket) => void }) {
+function DroppableColumn({ col, tickets, flashId, onTicketClick, loading }: { col: TicketStatus; tickets: Ticket[]; flashId: string | null; onTicketClick?: (t: Ticket) => void; loading?: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: col })
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -56,7 +57,13 @@ function DroppableColumn({ col, tickets, flashId, onTicketClick }: { col: Ticket
         {tickets.map(t => (
           <DraggableTicket key={t.id} ticket={t} flash={t.id === flashId} onClick={onTicketClick} />
         ))}
-        {tickets.length === 0 && (
+        {tickets.length === 0 && loading && (
+          <>
+            <div style={{ height: 64, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', marginBottom: 8, opacity: 0.5, animation: 'pulse 1.5s infinite' }} />
+            <div style={{ height: 64, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', marginBottom: 8, opacity: 0.5, animation: 'pulse 1.5s infinite' }} />
+          </>
+        )}
+        {tickets.length === 0 && !loading && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', padding: 12, textAlign: 'center' }}>—</div>
         )}
       </div>
@@ -87,7 +94,7 @@ function DraggableTicket({ ticket, flash, onClick }: { ticket: Ticket; flash: bo
   )
 }
 
-export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, projectId, onTicketCreated }: Props) {
+export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, projectId, onTicketCreated, loading }: Props) {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const [filterPriority, setFilterPriority] = useState<string>('ALL')
   const [filterComplexity, setFilterComplexity] = useState<string>('ALL')
@@ -98,6 +105,13 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  useEffect(() => {
+    if (!newTicketOpen) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setNewTicketOpen(false) }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [newTicketOpen])
 
   async function handleCreateTicket() {
     if (!projectId || !newTitle.trim()) return
@@ -224,7 +238,7 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
         {/* kanban columns */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, padding: 20, flex: 1, overflow: 'auto' }}>
           {COLS.map(col => (
-            <DroppableColumn key={col} col={col} tickets={grouped[col]} flashId={flashId} onTicketClick={onTicketClick} />
+            <DroppableColumn key={col} col={col} tickets={grouped[col]} flashId={flashId} onTicketClick={onTicketClick} loading={loading} />
           ))}
         </div>
       </div>
