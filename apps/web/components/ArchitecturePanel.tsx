@@ -165,6 +165,11 @@ export function ArchitecturePanel({ projectId }: Props) {
       {/* Module graph */}
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
         {error && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ef4444', marginBottom: 8 }}>{error}</div>}
+        {data?.codebase?.module_graph?.edges && data.codebase.module_graph.edges.length > 30 && (
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#f59e0b', marginBottom: 8, padding: '4px 8px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 4 }}>
+            Showing 30 of {data.codebase.module_graph.edges.length} edges — diagram truncated
+          </div>
+        )}
         <div ref={diagramRef} style={{ minHeight: 200 }} />
       </div>
     </div>
