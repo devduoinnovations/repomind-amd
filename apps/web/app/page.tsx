@@ -23,6 +23,7 @@ import { Sidebar } from '@/components/Sidebar'
 import type { SectionId } from '@/components/Sidebar'
 import { AgentWelcomeBanner } from '@/components/AgentWelcomeBanner'
 import type { WelcomeContext } from '@/components/AgentWelcomeBanner'
+import { AgentCustomizeModal } from '@/components/AgentCustomizeModal'
 
 interface Project {
   id: string
@@ -91,6 +92,9 @@ export default function App() {
   const [newProjectOpen, setNewProjectOpen] = useState(false)
   const [ticketDetail, setTicketDetail] = useState<Ticket | null>(null)
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false)
+  const [agentNames, setAgentNames] = useState<Record<string, string>>({})
+  const [agentCustomizeOpen, setAgentCustomizeOpen] = useState(false)
+  const [agentConfigs, setAgentConfigs] = useState<Record<string, any>>({})
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login')
@@ -106,6 +110,18 @@ export default function App() {
         if (list.length > 0) setSelectedProject(list[0])
       })
       .catch(() => {})
+  }, [])
+
+  // Load agent configs on mount
+  useEffect(() => {
+    fetch('/api/user/agents').then(r => r.json()).then(configs => {
+      setAgentConfigs(configs)
+      const names: Record<string, string> = {}
+      for (const [k, v] of Object.entries(configs as any)) {
+        names[k] = (v as any).displayName ?? k
+      }
+      setAgentNames(names)
+    }).catch(() => {})
   }, [])
 
   // Load tickets when project changes
@@ -296,6 +312,7 @@ export default function App() {
               setSection(id)
             }}
             suggestionCount={suggestionCount}
+            agentNames={agentNames}
           />
 
           <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -307,11 +324,29 @@ export default function App() {
                   <AgentWelcomeBanner
                     agent={SECTION_AGENTS[section]!}
                     context={welcomeContext}
+                    displayName={agentNames[SECTION_AGENTS[section]!]}
                   />
                 )}
 
                 {/* New Plan button bar */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', borderBottom: '1px solid var(--border)', background: 'var(--panel)', flexShrink: 0, padding: '0 16px', height: 44 }}>
+                  <button
+                    onClick={() => setAgentCustomizeOpen(true)}
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontWeight: 600,
+                      fontSize: 12,
+                      background: 'var(--surface)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--border)',
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      marginRight: 8,
+                    }}
+                  >
+                    AGENTS
+                  </button>
                   <button
                     onClick={() => setPlanOpen(true)}
                     style={{
@@ -431,6 +466,22 @@ export default function App() {
                 }
               }, 800)
             }
+          }}
+        />
+      )}
+
+      {agentCustomizeOpen && (
+        <AgentCustomizeModal
+          configs={agentConfigs}
+          onClose={() => setAgentCustomizeOpen(false)}
+          onSaved={(configs) => {
+            setAgentConfigs(configs)
+            const names: Record<string, string> = {}
+            for (const [k, v] of Object.entries(configs as any)) {
+              names[k] = (v as any).displayName ?? k
+            }
+            setAgentNames(names)
+            setAgentCustomizeOpen(false)
           }}
         />
       )}
