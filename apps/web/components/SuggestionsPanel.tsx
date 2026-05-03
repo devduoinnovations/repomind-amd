@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MascotSprite } from '@/components/mascots/MascotSprite'
 
 interface Suggestion {
@@ -27,7 +27,7 @@ export function SuggestionsPanel({ projectId, repoFull, onApproved }: Props) {
   const [diffs, setDiffs] = useState<Record<string, string | null>>({})
   const [expandedDiff, setExpandedDiff] = useState<string | null>(null)
 
-  const loadSuggestions = () => {
+  const loadSuggestions = useCallback(() => {
     if (!projectId) return
     setLoading(true)
     fetch(`/api/projects/${projectId}/repomind/suggestions`)
@@ -40,7 +40,7 @@ export function SuggestionsPanel({ projectId, repoFull, onApproved }: Props) {
         setError('Failed to load suggestions')
         setLoading(false)
       })
-  }
+  }, [projectId])
 
   useEffect(() => {
     loadSuggestions()
