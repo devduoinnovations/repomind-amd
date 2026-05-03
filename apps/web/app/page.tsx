@@ -268,6 +268,7 @@ export default function App() {
         onSelectProject={(p) => setSelectedProject(p)}
         onAddProject={() => setNewProjectOpen(true)}
         onSettingsClick={() => setProjectSettingsOpen(true)}
+        onSync={() => selectedProject && loadTickets(selectedProject.id)}
       />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
