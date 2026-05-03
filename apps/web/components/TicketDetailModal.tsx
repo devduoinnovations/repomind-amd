@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import type { Ticket, Priority, Complexity, TicketStatus } from '@/lib/types'
 
 interface Props {
@@ -35,6 +36,12 @@ export function TicketDetailModal({ ticket, onClose, onStatusChange }: Props) {
   const currentIdx = STATUS_FLOW.indexOf(t.status)
   const prevStatus = currentIdx > 0 ? STATUS_FLOW[currentIdx - 1] : null
   const nextStatus = currentIdx < STATUS_FLOW.length - 1 ? STATUS_FLOW[currentIdx + 1] : null
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
 
   return (
     <>
@@ -123,6 +130,18 @@ export function TicketDetailModal({ ticket, onClose, onStatusChange }: Props) {
             {COMPLEXITY_LABEL[t.complexity]} ({t.complexity})
           </span>
         </div>
+
+        {/* Description */}
+        {t.description && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+              Description
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {t.description}
+            </div>
+          </div>
+        )}
 
         {/* Complexity bar */}
         <div style={{ marginBottom: 24 }}>
