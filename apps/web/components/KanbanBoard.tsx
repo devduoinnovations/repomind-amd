@@ -91,6 +91,7 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const [filterPriority, setFilterPriority] = useState<string>('ALL')
   const [filterComplexity, setFilterComplexity] = useState<string>('ALL')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [newTicketOpen, setNewTicketOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDesc, setNewDesc] = useState('')
@@ -126,6 +127,12 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
   const filtered = tickets.filter(t => {
     if (filterPriority !== 'ALL' && t.priority !== filterPriority) return false
     if (filterComplexity !== 'ALL' && t.complexity !== filterComplexity) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      const inTitle = t.title?.toLowerCase().includes(q)
+      const inDesc = (t as any).description?.toLowerCase().includes(q)
+      if (!inTitle && !inDesc) return false
+    }
     return true
   })
 
@@ -155,6 +162,23 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* filter bar */}
         <div style={{ padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--panel)' }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search tickets…"
+            style={{
+              background: 'var(--void)',
+              border: '1px solid var(--border)',
+              borderRadius: 4,
+              padding: '3px 8px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--text-primary)',
+              outline: 'none',
+              width: 140,
+            }}
+          />
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>PRIORITY:</span>
           {['ALL', 'HIGH', 'MED', 'LOW'].map(p => (
             <button key={p} onClick={() => setFilterPriority(p)} style={{
