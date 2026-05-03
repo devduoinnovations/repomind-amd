@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS project_members (
 );
 ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Members see their memberships" ON project_members
-  USING (user_id = auth.uid() OR project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()));
+  USING (user_id = auth.uid() OR project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()::text));
 
 -- Invites
 CREATE TABLE IF NOT EXISTS project_invites (
@@ -24,4 +24,4 @@ CREATE TABLE IF NOT EXISTS project_invites (
 );
 ALTER TABLE project_invites ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Project owners manage invites" ON project_invites
-  USING (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()));
+  USING (project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()::text));
