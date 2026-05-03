@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
-import { publishRelease } from "@/lib/git-storage";
+import { publishRelease, getRelease, GitHubRepoFileClient } from "@/lib/git-storage";
 
 export async function POST(
   _req: NextRequest,
@@ -39,6 +39,39 @@ export async function POST(
       },
       releaseId
     );
+
+    // Fetch the release details to use in GitHub API call
+    const [owner, repo] = project.repo_full.split("/");
+    const client = new GitHubRepoFileClient({
+      owner, repo, token: project.github_token, branch: project.default_branch,
+    });
+    const releaseData = await getRelease(client, releaseId).catch(() => null);
+
+    if (releaseData?.version) {
+      const body = [
+        releaseData.summary ?? "",
+        releaseData.entries?.length
+          ? "\n## Changes\n" + releaseData.entries.map(e => `- **${e.category}:** ${e.content}`).join("\n")
+          : "",
+      ].filter(Boolean).join("\n").trim();
+
+      await fetch(`https://api.github.com/repos/${project.repo_full}/releases`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${project.github_token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tag_name: releaseData.version,
+          name: releaseData.title ?? releaseData.version,
+          body: body || undefined,
+          draft: false,
+          prerelease: false,
+        }),
+      }).catch(() => {}); // non-fatal: file-based publish already succeeded
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to publish release";

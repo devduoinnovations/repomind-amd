@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 interface Project {
   id: string
@@ -18,11 +19,13 @@ interface Props {
   onSelectProject: (p: Project) => void
   onAddProject: () => void
   onSettingsClick?: () => void
+  onSync?: () => void
 }
 
-export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectProject, onAddProject, onSettingsClick }: Props) {
+export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectProject, onAddProject, onSettingsClick, onSync }: Props) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const { data: session } = useSession()
 
   const [owner, repo] = (selectedProject?.repo_full || 'select / project').split('/')
 
@@ -139,17 +142,7 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
       </button>
       {selectedProject && (
         <button
-          onClick={async () => {
-            const btn = document.getElementById('sync-btn');
-            if (btn) btn.style.opacity = '0.5';
-            try {
-              await fetch(`/api/projects/${selectedProject.id}/repomind/tickets`, { method: 'GET' });
-              window.location.reload(); // Simple way to refresh everything
-            } finally {
-              if (btn) btn.style.opacity = '1';
-            }
-          }}
-          id="sync-btn"
+          onClick={() => onSync?.()}
           title="Sync with GitHub"
           style={{
             fontFamily: 'var(--font-mono)',
@@ -211,7 +204,7 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
           }}
         >
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ed1c24', boxShadow: '0 0 8px #ed1c24' }} />
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em' }}>GPU {gpu}% · MI300X · ROCm</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em' }}>GPU {gpu}% · {process.env.NEXT_PUBLIC_GPU_MODEL ?? 'MI300X ROCm'}</span>
         </button>
         <button
           onClick={() => router.push('/settings')}
@@ -223,7 +216,9 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
         >
           ⚙
         </button>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#ec4899)', border: '1px solid var(--border-hover)' }} />
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#ec4899)', border: '1px solid var(--border-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 14, color: '#0a0a14', fontWeight: 700, userSelect: 'none' }}>
+          {(session?.user?.name?.[0] ?? session?.user?.email?.[0] ?? '?').toUpperCase()}
+        </div>
       </div>
     </header>
   )

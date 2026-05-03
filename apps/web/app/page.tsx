@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import type { AgentState, AgentName, Ticket, ActivityEvent, AmdMetrics } from '@/lib/types'
-import { INITIAL_AGENTS, INITIAL_METRICS, INITIAL_LOG } from '@/lib/fake-data'
+import { INITIAL_AGENTS } from '@/lib/fake-data'
+import { useToast } from '@/components/Toast'
 import { Topbar } from '@/components/Topbar'
 import { CrewPanel } from '@/components/CrewPanel'
 import { KanbanBoard } from '@/components/KanbanBoard'
@@ -41,6 +42,7 @@ interface RawTicket {
   complexity: string
   created_at: string
   path?: string
+  description?: string
 }
 
 function mapTicket(t: RawTicket): Ticket {
@@ -67,20 +69,22 @@ function mapTicket(t: RawTicket): Ticket {
     priority: priorityMap[t.priority?.toLowerCase()] ?? 'MED',
     complexity: complexityMap[t.complexity?.toLowerCase()] ?? 'M',
     age,
-    ...(t.path ? { path: t.path } as any : {}),
+    ...(t.path ? { path: t.path } : {}),
+    ...(t.description ? { description: t.description } : {}),
   }
 }
 
 export default function App() {
   const { status } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
 
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [agents, setAgents] = useState<AgentState[]>(INITIAL_AGENTS)
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [feed, setFeed] = useState<ActivityEvent[]>([])
-  const [metrics, setMetrics] = useState<AmdMetrics>(INITIAL_METRICS)
+  const [metrics, setMetrics] = useState<AmdMetrics>({ gpu: 0, mem: 0, tokSec: 0, embedMs: 0 })
   const [section, setSection] = useState<SectionId>('kanban')
   const [planOpen, setPlanOpen] = useState(false)
   const [planWorking, setPlanWorking] = useState(false)
@@ -149,7 +153,7 @@ export default function App() {
       setSuggestionCount(count)
       if (count > 0) {
         setFeed(f => [
-          { color: '#14b8a6', text: `PATCH found <span style="color:#14b8a6">${count} pending suggestions</span>`, ago: 'now' },
+          { color: '#14b8a6', text: `PATCH found ${count} pending suggestions`, agent: 'PATCH', detail: `found ${count} pending suggestions`, ago: 'now' },
           ...f.filter(x => !x.text.includes('PATCH found')),
         ])
         setAgents(a => a.map(x => x.name === 'PATCH' ? { ...x, status: 'done' } : x))
@@ -163,33 +167,6 @@ export default function App() {
     loadSuggestions(selectedProject.id)
   }, [selectedProject, loadTickets, loadSuggestions])
 
-  // AMD metrics jitter
-  useEffect(() => {
-    const id = setInterval(() => {
-      setMetrics(m => ({
-        gpu:     Math.max(20, Math.min(95, m.gpu     + (Math.random() * 12 - 6))),
-        mem:     Math.max(40, Math.min(75, m.mem     + (Math.random() * 4  - 2))),
-        tokSec:  Math.max(1800, Math.min(3400, m.tokSec + Math.round(Math.random() * 200 - 100))),
-        embedMs: Math.max(8,    Math.min(20,   m.embedMs + Math.round(Math.random() * 4   - 2))),
-      }))
-    }, 1400)
-    return () => clearInterval(id)
-  }, [])
-
-  // PATCH commit flash (simulated if no real project)
-  useEffect(() => {
-    if (selectedProject || tickets.length === 0) return
-    const id = setInterval(() => {
-      if (tickets.length === 0) return
-      const tid = tickets[Math.floor(Math.random() * Math.min(3, tickets.length))]?.id
-      if (!tid) return
-      setFlashId(tid)
-      setAgents(a => a.map(x => x.name === 'PATCH' ? { ...x, status: 'working' } : x))
-      setTimeout(() => setFlashId(null), 1500)
-    }, 6000)
-    return () => clearInterval(id)
-  }, [selectedProject, tickets])
-
   const setAgent = (name: AgentName, status: AgentState['status']) =>
     setAgents(a => a.map(x => x.name === name ? { ...x, status } : x))
 
@@ -199,7 +176,7 @@ export default function App() {
       setPlanWorking(true)
       setAgent('SPARKY', 'working')
       setTimeout(() => {
-        setFeed(f => [{ color: '#f59e0b', text: 'SPARKY <span style="color:#fbbf24">needs a project selected</span>', ago: 'now' }, ...f])
+        setFeed(f => [{ color: '#f59e0b', text: 'SPARKY needs a project selected', agent: 'SPARKY', detail: 'needs a project selected', ago: 'now' }, ...f])
         setAgent('SPARKY', 'idle')
         setPlanWorking(false)
         setPlanOpen(false)
@@ -209,7 +186,7 @@ export default function App() {
 
     setPlanWorking(true)
     setAgent('SPARKY', 'working')
-    setFeed(f => [{ color: '#f59e0b', text: 'SPARKY <span style="color:#fbbf24">decomposing plan...</span>', ago: 'now' }, ...f])
+    setFeed(f => [{ color: '#f59e0b', text: 'SPARKY decomposing plan...', agent: 'SPARKY', detail: 'decomposing plan...', ago: 'now' }, ...f])
 
     try {
       const res = await fetch(`/api/projects/${selectedProject.id}/repomind/plan`, {
@@ -222,16 +199,18 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || 'Failed')
 
       setFeed(f => [
-        { color: '#f59e0b', text: `SPARKY <span style="color:#fbbf24">created ${data.ticketCount} tickets</span>`, ago: 'now' },
+        { color: '#f59e0b', text: `SPARKY created ${data.ticketCount} tickets`, agent: 'SPARKY', detail: `created ${data.ticketCount} tickets`, ago: 'now' },
         ...f,
       ])
+      toast(`${data.ticketCount} tickets created`, 'success')
       setAgent('SPARKY', 'done')
       setTimeout(() => setAgent('SPARKY', 'idle'), 2000)
 
       // Reload tickets
       await loadTickets(selectedProject.id)
     } catch (err: any) {
-      setFeed(f => [{ color: '#ef4444', text: `SPARKY <span style="color:#ef4444">error: ${err.message}</span>`, ago: 'now' }, ...f])
+      setFeed(f => [{ color: '#ef4444', text: `SPARKY error: ${err.message}`, agent: 'SPARKY', detail: `error: ${err.message}`, ago: 'now' }, ...f])
+      toast(`Plan failed: ${err.message}`, 'error')
       setAgent('SPARKY', 'error')
       setTimeout(() => setAgent('SPARKY', 'idle'), 2000)
     } finally {
@@ -250,6 +229,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus.toLowerCase().replace(/_/g, '-'), path: ticketPath }),
       })
+      toast('Ticket moved', 'success')
     } catch (err) {
       console.error('Failed to update ticket:', err)
       // Revert on failure
@@ -293,6 +273,7 @@ export default function App() {
         onSelectProject={(p) => setSelectedProject(p)}
         onAddProject={() => setNewProjectOpen(true)}
         onSettingsClick={() => setProjectSettingsOpen(true)}
+        onSync={() => selectedProject && loadTickets(selectedProject.id)}
       />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -375,10 +356,12 @@ export default function App() {
                         flashId={flashId}
                         onStatusChange={onTicketStatusChange}
                         onTicketClick={t => setTicketDetail(t)}
+                        projectId={selectedProject?.id ?? null}
+                        onTicketCreated={() => selectedProject && loadTickets(selectedProject.id)}
                       />
                     </ErrorBoundary>
                   )}
-                  {section === 'suggestions' && <ErrorBoundary><SuggestionsPanel projectId={selectedProject?.id ?? null} onApproved={() => loadTickets(selectedProject!.id)} /></ErrorBoundary>}
+                  {section === 'suggestions' && <ErrorBoundary><SuggestionsPanel projectId={selectedProject?.id ?? null} repoFull={selectedProject?.repo_full ?? null} onApproved={() => loadTickets(selectedProject!.id)} /></ErrorBoundary>}
                   {section === 'architecture' && <ErrorBoundary><ArchitecturePanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
                   {section === 'releases' && <ErrorBoundary><ReleasesPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
                   {section === 'chat' && <ErrorBoundary><ChatPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
@@ -393,7 +376,7 @@ export default function App() {
         open={amdOpen}
         onClose={() => setAmdOpen(false)}
         metrics={{ ...metrics, gpu: gpuRounded }}
-        log={INITIAL_LOG}
+        log={[]}
       />
 
       {agentModal && (
@@ -405,9 +388,10 @@ export default function App() {
           onScanComplete={(result) => {
             setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))
             setFeed(f => [
-              { color: '#60a5fa', text: `SCOUT <span style="color:#60a5fa">indexed ${result.moduleCount} modules from ${result.fileCount} files</span>`, ago: 'now' },
+              { color: '#60a5fa', text: `SCOUT indexed ${result.moduleCount} modules from ${result.fileCount} files`, agent: 'SCOUT', detail: `indexed ${result.moduleCount} modules from ${result.fileCount} files`, ago: 'now' },
               ...f,
             ])
+            toast(`Scan complete — ${result.moduleCount} modules indexed`, 'success')
             setTimeout(() => setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'idle' } : x)), 3000)
           }}
         />
@@ -449,13 +433,13 @@ export default function App() {
             if ((project as any)._initialised) {
               setTimeout(async () => {
                 setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'working' } : x))
-                setFeed(f => [{ color: '#22c55e', text: 'SCOUT <span style="color:#22c55e">scanning new repo…</span>', ago: 'now' }, ...f])
+                setFeed(f => [{ color: '#22c55e', text: 'SCOUT scanning new repo…', agent: 'SCOUT', detail: 'scanning new repo…', ago: 'now' }, ...f])
                 try {
                   const res = await fetch(`/api/projects/${project.id}/scan`, { method: 'POST' })
                   const data = await res.json()
                   if (res.ok) {
                     setFeed(f => [
-                      { color: '#22c55e', text: `SCOUT <span style="color:#22c55e">indexed ${data.moduleCount} modules</span>`, ago: 'now' },
+                      { color: '#22c55e', text: `SCOUT indexed ${data.moduleCount} modules`, agent: 'SCOUT', detail: `indexed ${data.moduleCount} modules`, ago: 'now' },
                       ...f,
                     ])
                     setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))

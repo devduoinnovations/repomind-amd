@@ -19,6 +19,8 @@ interface Props {
   flashId: string | null
   onStatusChange?: (ticketId: string, newStatus: string, ticketPath?: string) => void
   onTicketClick?: (ticket: Ticket) => void
+  projectId?: string | null
+  onTicketCreated?: () => void
 }
 
 const COLS: TicketStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
@@ -85,15 +87,52 @@ function DraggableTicket({ ticket, flash, onClick }: { ticket: Ticket; flash: bo
   )
 }
 
-export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick }: Props) {
+export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, projectId, onTicketCreated }: Props) {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const [filterPriority, setFilterPriority] = useState<string>('ALL')
   const [filterComplexity, setFilterComplexity] = useState<string>('ALL')
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [newTicketOpen, setNewTicketOpen] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  async function handleCreateTicket() {
+    if (!projectId || !newTitle.trim()) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/repomind/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle.trim(), description: newDesc.trim() || undefined }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error ?? `Request failed (${res.status})`)
+      }
+      setNewTicketOpen(false)
+      setNewTitle('')
+      setNewDesc('')
+      onTicketCreated?.()
+    } catch (err: any) {
+      setCreateError(err?.message ?? 'Unknown error')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const filtered = tickets.filter(t => {
     if (filterPriority !== 'ALL' && t.priority !== filterPriority) return false
     if (filterComplexity !== 'ALL' && t.complexity !== filterComplexity) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      const inTitle = t.title?.toLowerCase().includes(q)
+      const inDesc = (t as any).description?.toLowerCase().includes(q)
+      if (!inTitle && !inDesc) return false
+    }
     return true
   })
 
@@ -123,6 +162,23 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick }:
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* filter bar */}
         <div style={{ padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--panel)' }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search tickets…"
+            style={{
+              background: 'var(--void)',
+              border: '1px solid var(--border)',
+              borderRadius: 4,
+              padding: '3px 8px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--text-primary)',
+              outline: 'none',
+              width: 140,
+            }}
+          />
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>PRIORITY:</span>
           {['ALL', 'HIGH', 'MED', 'LOW'].map(p => (
             <button key={p} onClick={() => setFilterPriority(p)} style={{
@@ -146,6 +202,24 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick }:
           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             {filtered.length} / {tickets.length} tickets
           </span>
+          {projectId && (
+            <button
+              onClick={() => { setNewTicketOpen(true); setCreateError(null) }}
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 11,
+                letterSpacing: '0.06em',
+                background: 'rgba(96,165,250,0.15)',
+                color: '#60a5fa',
+                border: '1px solid rgba(96,165,250,0.3)',
+                padding: '4px 10px',
+                borderRadius: 4,
+                cursor: 'pointer',
+              }}
+            >
+              + New Ticket
+            </button>
+          )}
         </div>
         {/* kanban columns */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, padding: 20, flex: 1, overflow: 'auto' }}>
@@ -157,6 +231,60 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick }:
       <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
         {activeTicket ? <TicketCard ticket={activeTicket} flash={false} /> : null}
       </DragOverlay>
+
+      {newTicketOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={e => { if (e.target === e.currentTarget) { setNewTicketOpen(false) } }}
+        >
+          <div style={{ background: 'var(--panel)', border: '1px solid var(--border-hover)', borderRadius: 10, padding: 24, minWidth: 360, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.08em', color: 'var(--text-primary)' }}>NEW TICKET</span>
+            <input
+              placeholder="Title (required)"
+              value={newTitle}
+              onChange={e => setNewTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleCreateTicket() }}
+              style={{ background: 'var(--void)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 12, width: '100%', outline: 'none', boxSizing: 'border-box' }}
+              autoFocus
+            />
+            <textarea
+              placeholder="Description (optional)"
+              value={newDesc}
+              onChange={e => setNewDesc(e.target.value)}
+              rows={3}
+              style={{ background: 'var(--void)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 12, width: '100%', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+            {createError && (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#f87171' }}>{createError}</span>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setNewTicketOpen(false)}
+                style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.06em', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer' }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleCreateTicket}
+                disabled={creating || !newTitle.trim()}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 11,
+                  letterSpacing: '0.06em',
+                  background: creating || !newTitle.trim() ? 'rgba(96,165,250,0.06)' : 'rgba(96,165,250,0.15)',
+                  color: creating || !newTitle.trim() ? 'rgba(96,165,250,0.4)' : '#60a5fa',
+                  border: `1px solid ${creating || !newTitle.trim() ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.3)'}`,
+                  padding: '4px 12px',
+                  borderRadius: 4,
+                  cursor: creating || !newTitle.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {creating ? 'CREATING...' : 'CREATE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DndContext>
   )
 }

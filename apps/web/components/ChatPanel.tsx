@@ -11,6 +11,29 @@ export function ChatPanel({ projectId }: Props) {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  // Load messages from localStorage when projectId changes
+  useEffect(() => {
+    if (projectId) {
+      const key = `lyra_chat_${projectId}`
+      const saved = localStorage.getItem(key)
+      try {
+        setMessages(saved ? JSON.parse(saved) : [])
+      } catch {
+        setMessages([])
+      }
+    } else {
+      setMessages([])
+    }
+  }, [projectId])
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (projectId && messages.length > 0) {
+      const key = `lyra_chat_${projectId}`
+      localStorage.setItem(key, JSON.stringify(messages))
+    }
+  }, [messages, projectId])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
@@ -61,7 +84,7 @@ export function ChatPanel({ projectId }: Props) {
             </div>
             {projectId && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 400, marginTop: 8 }}>
-                {['How does auth work?', 'Explain the data flow', 'Where is the API logic?', 'Show me the project config'].map(q => (
+                {['What does this codebase do?', 'Explain the main data flow', 'Where is the API logic?', 'What are the key modules?'].map(q => (
                   <button
                     key={q}
                     onClick={() => { setInput(q); }}

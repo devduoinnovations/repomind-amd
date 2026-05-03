@@ -96,9 +96,7 @@ export function ArchitecturePanel({ projectId }: Props) {
         </div>
         {error && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ef4444', textAlign: 'center', maxWidth: 400 }}>
-            {error.includes('429') || error.includes('quota') 
-              ? 'AI QUOTA EXHAUSTED: The free tier has a 1-minute cooldown. Please wait a moment and try again.'
-              : error}
+            {error}
           </div>
         )}
         {!scanning && (

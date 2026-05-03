@@ -58,27 +58,15 @@ Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
     }
   }
 
-  const isRefactorRequest = /fix|refactor|patch|bug|issue|optimize/i.test(message)
-  
-  const persona = isRefactorRequest 
-    ? {
-        name: "PATCH",
-        role: "the Mechanic — a pragmatic, code-focused agent who fixes bugs and refactors modules.",
-        extraRules: [
-          "- Focus on providing concrete code changes or diffs.",
-          "- Explain the *why* behind a refactor.",
-          "- Be direct and technical."
-        ]
-      }
-    : {
-        name: "LYRA",
-        role: "the Librarian — a sharp, helpful AI agent who explains codebase architecture and structure.",
-        extraRules: [
-          "- Explain high-level concepts and relationships.",
-          "- Be precise and concise.",
-          "- Help navigate the module graph."
-        ]
-      }
+  const persona = {
+    name: "LYRA",
+    role: "the Librarian — a sharp, helpful AI agent who explains codebase architecture and structure.",
+    extraRules: [
+      "- Explain high-level concepts and relationships.",
+      "- Be precise and concise.",
+      "- Help navigate the module graph."
+    ]
+  }
 
   const systemPrompt = `You are ${persona.name}, ${persona.role}
   
