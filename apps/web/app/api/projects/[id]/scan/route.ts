@@ -125,7 +125,6 @@ export async function POST(
     try {
       moduleGraph = await buildModuleGraph(sourcePaths, apiKey);
     } catch (aiErr: any) {
-      console.warn("[scan] AI Scan failed, falling back to static graph:", aiErr.message);
       // STATIC FALLBACK: Build a basic graph without AI
       moduleGraph = {
         modules: sourcePaths.slice(0, 50).map(p => {

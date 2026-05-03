@@ -22,7 +22,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const inviteUrl = `${process.env.APP_URL}/invites/${invite.token}`;
-  console.log("[invite] Invite URL:", inviteUrl);
 
   const { sendTeamInviteEmail } = await import("@/lib/email");
   sendTeamInviteEmail(

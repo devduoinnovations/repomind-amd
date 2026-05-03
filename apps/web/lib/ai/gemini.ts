@@ -40,7 +40,6 @@ export async function callGemini(params: {
       if (res.status === 429) {
         const errData = await res.json().catch(() => ({}));
         const retryAfter = 60000; // Default 1 min for free tier
-        console.warn(`[Gemini] 429 Rate Limit hit. Attempt ${attempt + 1}. Retrying in ${retryAfter}ms...`);
         await new Promise(r => setTimeout(r, retryAfter));
         continue;
       }

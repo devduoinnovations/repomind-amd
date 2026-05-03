@@ -29,9 +29,8 @@ export async function syncTicketIndex(client: GitHubRepoFileClient, currentHeadS
     try {
       const changedFiles = await client.getChangedFiles(currentIndex.last_commit, headSha);
       const ticketChanges = changedFiles.filter(f => f.startsWith(".repomind/tickets/") && f.endsWith(".md"));
-      
+
       if (ticketChanges.length > 0) {
-        console.log(`Incremental update: ${ticketChanges.length} tickets changed.`);
         return await updateTicketIndexEntries(client, ticketChanges, headSha);
       } else {
         // No tickets changed, just update the head SHA
@@ -44,12 +43,11 @@ export async function syncTicketIndex(client: GitHubRepoFileClient, currentHeadS
         return updatedIndex;
       }
     } catch (err) {
-      console.warn("Incremental update failed, falling back to full rebuild:", err);
+      // Fall back to full rebuild if incremental update fails
     }
   }
 
   // Full rebuild
-  console.log("Performing full ticket index rebuild.");
   const tickets: TicketIndex["tickets"] = [];
   const rootItems = await client.listDirectory(".repomind/tickets");
 

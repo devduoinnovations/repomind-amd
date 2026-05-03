@@ -93,7 +93,7 @@ export async function createReleaseFromPR(
       `chore: add release notes for ${version} (PR #${pr.number})`
     );
   } catch (writeErr: any) {
-    console.warn("[releases] Could not write release file to repo:", writeErr?.message ?? writeErr);
+    // Non-fatal: release written to DB even if repo write fails
   }
 }
 
