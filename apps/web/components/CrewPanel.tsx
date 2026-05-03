@@ -71,7 +71,7 @@ function Bar({ label, value, color }: { label: string; value: number; color: str
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>{label}</span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)' }}>{value}%</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)' }}>{value === 0 ? '—' : `${value}%`}</span>
       </div>
       <div style={{ height: 4, background: 'var(--void)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${value}%`, background: color, transition: 'width 600ms var(--ease-snap)' }} />
@@ -84,7 +84,7 @@ function Stat({ n, unit, label }: { n: string | number; unit?: string; label: st
   return (
     <div>
       <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text-primary)', lineHeight: 1 }}>
-        {n}{unit && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 2 }}>{unit}</span>}
+        {(n === 0 || n === '0') ? '—' : n}{unit && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 2 }}>{unit}</span>}
       </div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
     </div>

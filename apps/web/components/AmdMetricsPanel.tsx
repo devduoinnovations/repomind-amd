@@ -36,15 +36,15 @@ export function AmdMetricsPanel({ open, onClose, metrics, log }: Props) {
 
         <Section title="PATCH · Mistral 7B Instruct">
           <Row k="STATUS" v={<span style={{ color: '#22c55e' }}>● RUNNING</span>} />
-          <Row k="GPU" v={`${metrics.gpu}%`} />
-          <BigStat n={metrics.tokSec.toLocaleString()} u="tok/sec" />
+          <Row k="GPU" v={metrics.gpu === 0 ? '—' : `${metrics.gpu}%`} />
+          <BigStat n={metrics.tokSec === 0 ? '—' : metrics.tokSec.toLocaleString()} u="tok/sec" />
           <Row k="P50" v="42ms" />
           <Row k="P95" v="118ms" />
         </Section>
 
         <Section title="Embedder · nomic-embed-text v1.5">
           <Row k="STATUS" v={<span style={{ color: '#22c55e' }}>● RUNNING</span>} />
-          <Row k="BATCH" v={`${metrics.embedMs}ms avg`} />
+          <Row k="BATCH" v={metrics.embedMs === 0 ? '—' : `${metrics.embedMs}ms avg`} />
           <Row k="STORED" v="14,732" />
         </Section>
 
