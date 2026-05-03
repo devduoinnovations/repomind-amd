@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import type { AgentState, AgentName, Ticket, ActivityEvent, AmdMetrics } from '@/lib/types'
 import { INITIAL_AGENTS } from '@/lib/fake-data'
+import { useToast } from '@/components/Toast'
 import { Topbar } from '@/components/Topbar'
 import { CrewPanel } from '@/components/CrewPanel'
 import { KanbanBoard } from '@/components/KanbanBoard'
@@ -76,6 +77,7 @@ function mapTicket(t: RawTicket): Ticket {
 export default function App() {
   const { status } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
 
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
@@ -200,6 +202,7 @@ export default function App() {
         { color: '#f59e0b', text: `SPARKY created ${data.ticketCount} tickets`, agent: 'SPARKY', detail: `created ${data.ticketCount} tickets`, ago: 'now' },
         ...f,
       ])
+      toast(`${data.ticketCount} tickets created`, 'success')
       setAgent('SPARKY', 'done')
       setTimeout(() => setAgent('SPARKY', 'idle'), 2000)
 
@@ -207,6 +210,7 @@ export default function App() {
       await loadTickets(selectedProject.id)
     } catch (err: any) {
       setFeed(f => [{ color: '#ef4444', text: `SPARKY error: ${err.message}`, agent: 'SPARKY', detail: `error: ${err.message}`, ago: 'now' }, ...f])
+      toast(`Plan failed: ${err.message}`, 'error')
       setAgent('SPARKY', 'error')
       setTimeout(() => setAgent('SPARKY', 'idle'), 2000)
     } finally {
@@ -225,6 +229,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus.toLowerCase().replace(/_/g, '-'), path: ticketPath }),
       })
+      toast('Ticket moved', 'success')
     } catch (err) {
       console.error('Failed to update ticket:', err)
       // Revert on failure
@@ -386,6 +391,7 @@ export default function App() {
               { color: '#60a5fa', text: `SCOUT indexed ${result.moduleCount} modules from ${result.fileCount} files`, agent: 'SCOUT', detail: `indexed ${result.moduleCount} modules from ${result.fileCount} files`, ago: 'now' },
               ...f,
             ])
+            toast(`Scan complete — ${result.moduleCount} modules indexed`, 'success')
             setTimeout(() => setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'idle' } : x)), 3000)
           }}
         />
