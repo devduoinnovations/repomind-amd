@@ -35,6 +35,7 @@ export function AgentCustomizeModal({ configs, onClose, onSaved }: Props) {
   const [displayName, setDisplayName] = useState(configs[selected]?.displayName ?? selected)
   const [voiceLine, setVoiceLine] = useState(configs[selected]?.voiceLine ?? DEFAULT_VOICE_LINES[selected])
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const switchAgent = (name: AgentName) => {
     setSelected(name)
@@ -44,12 +45,14 @@ export function AgentCustomizeModal({ configs, onClose, onSaved }: Props) {
 
   const save = async () => {
     setSaving(true)
+    setSaveError('')
     const res = await fetch('/api/user/agents', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ agentName: selected, displayName, voiceLine }),
     })
     const data = await res.json()
     if (res.ok) onSaved(data.configs)
+    else setSaveError(data.error ?? 'Save failed')
     setSaving(false)
   }
 
@@ -105,6 +108,7 @@ export function AgentCustomizeModal({ configs, onClose, onSaved }: Props) {
             RESET
           </button>
         </div>
+        {saveError && <div style={{ marginTop:8, fontSize:11, color:'#ef4444', fontFamily:'var(--font-mono)' }}>{saveError}</div>}
       </div>
     </div>
   )

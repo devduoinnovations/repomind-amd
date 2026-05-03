@@ -481,6 +481,11 @@ export default function App() {
               names[k] = (v as any).displayName ?? k
             }
             setAgentNames(names)
+            setAgents(a => a.map(x =>
+              (configs as any)[x.name]?.voiceLine
+                ? { ...x, voiceLine: (configs as any)[x.name].voiceLine }
+                : x
+            ))
             setAgentCustomizeOpen(false)
           }}
         />
