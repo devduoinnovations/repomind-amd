@@ -199,3 +199,8 @@ button { font-family: inherit; }
 ::-webkit-scrollbar          { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb    { background: rgba(255,255,255,0.06); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
