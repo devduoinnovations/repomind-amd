@@ -15,14 +15,17 @@ interface Suggestion {
 
 interface Props {
   projectId: string | null
+  repoFull?: string | null
   onApproved?: () => void
 }
 
-export function SuggestionsPanel({ projectId, onApproved }: Props) {
+export function SuggestionsPanel({ projectId, repoFull, onApproved }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(false)
   const [actioning, setActioning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [diffs, setDiffs] = useState<Record<string, string | null>>({})
+  const [expandedDiff, setExpandedDiff] = useState<string | null>(null)
 
   const loadSuggestions = () => {
     if (!projectId) return
@@ -42,6 +45,33 @@ export function SuggestionsPanel({ projectId, onApproved }: Props) {
   useEffect(() => {
     loadSuggestions()
   }, [projectId])
+
+  const toggleDiff = async (s: Suggestion) => {
+    if (expandedDiff === s.id) {
+      setExpandedDiff(null)
+      return
+    }
+    setExpandedDiff(s.id)
+    if (s.id in diffs) return
+    if (!repoFull || !s.commit_sha) {
+      setDiffs(prev => ({ ...prev, [s.id]: null }))
+      return
+    }
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${repoFull}/commits/${s.commit_sha}`,
+        { headers: { Accept: 'application/vnd.github.diff' } }
+      )
+      if (!res.ok) {
+        setDiffs(prev => ({ ...prev, [s.id]: null }))
+        return
+      }
+      const text = await res.text()
+      setDiffs(prev => ({ ...prev, [s.id]: text }))
+    } catch {
+      setDiffs(prev => ({ ...prev, [s.id]: null }))
+    }
+  }
 
   const handleApprove = async (sid: string) => {
     if (!projectId || actioning) return
@@ -91,6 +121,19 @@ export function SuggestionsPanel({ projectId, onApproved }: Props) {
     } finally {
       setActioning(null)
     }
+  }
+
+  const renderDiff = (diffText: string) => {
+    return diffText.split('\n').map((line, i) => {
+      let color: string | undefined
+      if (line.startsWith('+') && !line.startsWith('+++')) color = '#22c55e'
+      else if (line.startsWith('-') && !line.startsWith('---')) color = '#ef4444'
+      return (
+        <span key={i} style={{ color, display: 'block' }}>
+          {line || ' '}
+        </span>
+      )
+    })
   }
 
   if (!projectId) {
@@ -203,6 +246,51 @@ export function SuggestionsPanel({ projectId, onApproved }: Props) {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>
                 `{s.commit_sha.slice(0, 7)}` {s.commit_message}
               </div>
+
+              {repoFull && s.commit_sha && (
+                <>
+                  <button
+                    onClick={() => toggleDiff(s)}
+                    style={{
+                      alignSelf: 'flex-start',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 10,
+                      letterSpacing: '0.06em',
+                      background: 'transparent',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--border)',
+                      padding: '3px 8px',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {expandedDiff === s.id ? 'HIDE DIFF' : 'SHOW DIFF'}
+                  </button>
+
+                  {expandedDiff === s.id && (
+                    <pre style={{
+                      background: 'var(--void)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      padding: 12,
+                      fontSize: 10,
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--text-muted)',
+                      overflowX: 'auto',
+                      maxHeight: 200,
+                      overflowY: 'auto',
+                      whiteSpace: 'pre',
+                      marginBottom: 8,
+                    }}>
+                      {!(s.id in diffs)
+                        ? 'Loading diff...'
+                        : diffs[s.id] === null
+                          ? 'Diff unavailable'
+                          : renderDiff(diffs[s.id]!)}
+                    </pre>
+                  )}
+                </>
+              )}
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <button

@@ -353,7 +353,7 @@ export default function App() {
                       />
                     </ErrorBoundary>
                   )}
-                  {section === 'suggestions' && <ErrorBoundary><SuggestionsPanel projectId={selectedProject?.id ?? null} onApproved={() => loadTickets(selectedProject!.id)} /></ErrorBoundary>}
+                  {section === 'suggestions' && <ErrorBoundary><SuggestionsPanel projectId={selectedProject?.id ?? null} repoFull={selectedProject?.repo_full ?? null} onApproved={() => loadTickets(selectedProject!.id)} /></ErrorBoundary>}
                   {section === 'architecture' && <ErrorBoundary><ArchitecturePanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
                   {section === 'releases' && <ErrorBoundary><ReleasesPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
                   {section === 'chat' && <ErrorBoundary><ChatPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
