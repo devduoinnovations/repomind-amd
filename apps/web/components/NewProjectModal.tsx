@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 type RepoOption = { full_name: string; name: string; private: boolean; default_branch: string }
 
@@ -29,6 +29,12 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
   const [reposLoading, setReposLoading] = useState(false)
   const [repoSearch, setRepoSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
 
   const slug = slugify(name)
 
