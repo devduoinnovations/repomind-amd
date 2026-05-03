@@ -348,6 +348,8 @@ export default function App() {
                         flashId={flashId}
                         onStatusChange={onTicketStatusChange}
                         onTicketClick={t => setTicketDetail(t)}
+                        projectId={selectedProject?.id ?? null}
+                        onTicketCreated={() => selectedProject && loadTickets(selectedProject.id)}
                       />
                     </ErrorBoundary>
                   )}
