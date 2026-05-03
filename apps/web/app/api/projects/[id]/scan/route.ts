@@ -46,7 +46,7 @@ function detectTechStack(paths: string[]) {
 import { callGemini } from "@/lib/ai/gemini";
 
 async function buildModuleGraph(sourcePaths: string[], apiKey: string) {
-  const capped = sourcePaths.slice(0, 80);
+  const capped = sourcePaths.slice(0, 200);
 
   const prompt = `You are analyzing a software repository. Given these source file paths, generate a module dependency graph.
 Source files:
@@ -186,6 +186,7 @@ export async function POST(
       moduleCount: moduleGraph.modules?.length ?? 0,
       fileCount: allPaths.length,
       techStack,
+      isPartial: sourcePaths.length > 200,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Scan failed";
