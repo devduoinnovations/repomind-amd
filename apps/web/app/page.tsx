@@ -25,6 +25,7 @@ import type { SectionId } from '@/components/Sidebar'
 import { AgentWelcomeBanner } from '@/components/AgentWelcomeBanner'
 import type { WelcomeContext } from '@/components/AgentWelcomeBanner'
 import { AgentCustomizeModal } from '@/components/AgentCustomizeModal'
+import { ScoutPanel } from '@/components/ScoutPanel'
 
 interface Project {
   id: string
@@ -368,6 +369,9 @@ export default function App() {
                   {section === 'architecture' && <ErrorBoundary><ArchitecturePanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
                   {section === 'releases' && <ErrorBoundary><ReleasesPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
                   {section === 'chat' && <ErrorBoundary><ChatPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
+                  {section === 'scout' && selectedProject && (
+                    <ScoutPanel projectId={selectedProject.id} />
+                  )}
                 </div>
               </>
             )}

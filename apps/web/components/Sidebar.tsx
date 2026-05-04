@@ -2,7 +2,7 @@
 import { MascotSprite } from '@/components/mascots/MascotSprite'
 import type { AgentName } from '@/lib/types'
 
-export type SectionId = 'kanban' | 'suggestions' | 'architecture' | 'releases' | 'chat' | 'settings'
+export type SectionId = 'kanban' | 'suggestions' | 'architecture' | 'releases' | 'chat' | 'scout' | 'settings'
 
 interface SidebarItem {
   id: SectionId
@@ -24,6 +24,7 @@ const BASE_ITEMS: SidebarItem[] = [
   { id: 'architecture', label: 'ARCHITECTURE', agent: 'SAGE',   agentColor: '#8b5cf6' },
   { id: 'releases',     label: 'RELEASES',     agent: 'NOVA',   agentColor: '#ec4899' },
   { id: 'chat',         label: 'Q&A',          agent: 'LYRA',   agentColor: '#60a5fa' },
+  { id: 'scout',        label: 'SECURITY',     agent: 'SCOUT',  agentColor: '#22c55e' },
 ]
 
 export function Sidebar({ active, onSelect, suggestionCount = 0, agentNames = {} }: Props) {
