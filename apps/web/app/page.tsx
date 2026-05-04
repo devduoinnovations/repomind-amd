@@ -131,6 +131,22 @@ export default function App() {
     }).catch(() => {})
   }, [])
 
+  // Poll AMD vLLM metrics every 5 seconds
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_AMD_ENABLED) return
+    const poll = () =>
+      fetch('/api/system/metrics')
+        .then(r => r.json())
+        .then((data: { available?: boolean; gpu?: number; mem?: number; tokSec?: number; embedMs?: number }) => {
+          if (data.available) setMetrics({ gpu: data.gpu ?? 0, mem: data.mem ?? 0, tokSec: data.tokSec ?? 0, embedMs: data.embedMs ?? 0 })
+        })
+        .catch(() => {})
+
+    poll()
+    const interval = setInterval(poll, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
   // Load tickets when project changes
   const loadTickets = useCallback(async (projectId: string) => {
     setLoadingTickets(true)

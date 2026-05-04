@@ -32,26 +32,26 @@ export function AmdMetricsPanel({ open, onClose, metrics, log }: Props) {
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ed1c24', boxShadow: '0 0 10px #ed1c24', animation: 'pulse 1.5s infinite' }} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text-primary)', letterSpacing: '0.04em' }}>AMD DEVELOPER CLOUD</span>
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 24 }}>MI300X · ROCm 6.X · vLLM</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 24 }}>MI300X · ROCm 7.2 · vLLM 0.17.1</div>
 
-        <Section title="PATCH · Mistral 7B Instruct">
-          <Row k="STATUS" v={<span style={{ color: '#22c55e' }}>● RUNNING</span>} />
-          <Row k="GPU" v={metrics.gpu === 0 ? '—' : `${metrics.gpu}%`} />
+        <Section title={`MODEL · ${process.env.NEXT_PUBLIC_GPU_MODEL ?? 'Qwen2.5-72B-Instruct'}`}>
+          <Row k="STATUS" v={<span style={{ color: '#22c55e' }}>● ONLINE</span>} />
+          <Row k="GPU CACHE" v={metrics.gpu === 0 ? '—' : `${metrics.gpu}%`} />
           <BigStat n={metrics.tokSec === 0 ? '—' : metrics.tokSec.toLocaleString()} u="tok/sec" />
-          <Row k="P50" v="42ms" />
-          <Row k="P95" v="118ms" />
+          <Row k="AVG TTFT" v={metrics.embedMs === 0 ? '—' : `${metrics.embedMs}ms`} />
         </Section>
 
-        <Section title="Embedder · nomic-embed-text v1.5">
-          <Row k="STATUS" v={<span style={{ color: '#22c55e' }}>● RUNNING</span>} />
-          <Row k="BATCH" v={metrics.embedMs === 0 ? '—' : `${metrics.embedMs}ms avg`} />
-          <Row k="STORED" v="14,732" />
+        <Section title="ACTIVE AGENTS">
+          {(['SPARKY', 'PATCH', 'SAGE', 'NOVA', 'LYRA', 'SCOUT'] as const).map(agent => (
+            <Row key={agent} k={agent} v={<span style={{ color: '#22c55e' }}>● AMD GPU</span>} />
+          ))}
         </Section>
 
-        <Section title="AMD Impact">
-          <Row k="commits analyzed" v="287" />
-          <Row k="chunks embedded" v="14,732" />
-          <Row k="vs cpu baseline" v={<span style={{ color: '#22c55e' }}>~12× faster</span>} />
+        <Section title="AMD IMPACT">
+          <Row k="GPU" v="MI300X · 192GB VRAM" />
+          <Row k="FRAMEWORK" v="vLLM 0.17.1 + ROCm 7.2" />
+          <Row k="AGENTS SERVED" v="6 / 6" />
+          <Row k="VS CLOUD API" v={<span style={{ color: '#22c55e' }}>∞ req/day</span>} />
         </Section>
 
         <Section title="Live log">
