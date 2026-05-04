@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 
 interface Project {
   id: string
@@ -215,6 +215,17 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
           }}
         >
           ⚙
+        </button>
+        <button
+          onClick={() => signOut()}
+          title="Sign Out"
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: 12, padding: '4px 8px',
+            fontFamily: 'var(--font-mono)', letterSpacing: '0.05em'
+          }}
+        >
+          LOGOUT
         </button>
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#ec4899)', border: '1px solid var(--border-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 14, color: '#0a0a14', fontWeight: 700, userSelect: 'none' }}>
           {(session?.user?.name?.[0] ?? session?.user?.email?.[0] ?? '?').toUpperCase()}

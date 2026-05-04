@@ -4,15 +4,17 @@
 
 export async function callGemini(params: {
   apiKey: string;
+  model?: string;
   prompt: string;
   systemPrompt?: string;
   history?: { role: 'user' | 'model'; parts: { text: string }[] }[];
   responseMimeType?: string;
   temperature?: number;
+  thinkingBudget?: number;
 }) {
-  const { apiKey, prompt, systemPrompt, history = [], responseMimeType, temperature = 0.3 } = params;
+  const { apiKey, model = 'gemini-2.5-flash', prompt, systemPrompt, history = [], responseMimeType, temperature = 0.3, thinkingBudget } = params;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   
   const body: any = {
     contents: [...history, { role: "user", parts: [{ text: prompt }] }],
@@ -21,6 +23,10 @@ export async function callGemini(params: {
       ...(responseMimeType ? { responseMimeType } : {}),
     },
   };
+
+  if (thinkingBudget !== undefined) {
+    body.generationConfig.thinkingConfig = { thinkingBudget };
+  }
 
   if (systemPrompt) {
     body.systemInstruction = { parts: [{ text: systemPrompt }] };

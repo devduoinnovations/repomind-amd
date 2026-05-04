@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase start && next dev",
+    "supabase:start": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase start",
+    "supabase:stop": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase stop",
+    "supabase:reset": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase db reset",
     "build": "next build",
     "start": "next start"
   },

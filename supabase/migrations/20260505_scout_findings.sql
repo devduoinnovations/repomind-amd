@@ -19,5 +19,5 @@ alter table scout_findings enable row level security;
 
 create policy "Users can manage own project findings" on scout_findings
   for all using (
-    project_id in (select id from projects where user_id = auth.uid())
+    project_id in (select id from projects where user_id = auth.uid()::text)
   );

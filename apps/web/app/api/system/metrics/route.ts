@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 function parsePrometheus(text: string, metricName: string): number {
   for (const line of text.split('\n')) {
     if (line.startsWith('#') || !line.includes(metricName)) continue
