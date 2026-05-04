@@ -37,11 +37,11 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { name, repoFull, slug } = await req.json()
-  if (!name || !repoFull || !slug) {
+  const { name, repoFull, slug, createNewRepo, isPrivate = true } = await req.json()
+  if (!name || !slug) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
-  if (!repoFull.includes("/")) {
+  if (!createNewRepo && (!repoFull || !repoFull.includes("/"))) {
     return NextResponse.json({ error: "repoFull must be owner/repo" }, { status: 400 })
   }
 
@@ -50,22 +50,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No GitHub token. Please reconnect." }, { status: 401 })
   }
 
-  // Validate repo exists and is accessible
-  const repoCheckRes = await fetch(
-    `https://api.github.com/repos/${repoFull}`,
-    { headers: { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json" } }
-  )
-  if (!repoCheckRes.ok) {
-    return NextResponse.json(
-      { error: repoCheckRes.status === 404 ? "Repository not found or not accessible" : "Could not access repository" },
-      { status: 400 }
+  let resolvedRepoFull = repoFull
+
+  if (createNewRepo) {
+    // Determine the repo name to create (the user might have passed just "my-app" or "owner/my-app")
+    const repoNameToCreate = repoFull.includes("/") ? repoFull.split("/")[1] : repoFull
+
+    const createRes = await fetch("https://api.github.com/user/repos", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: repoNameToCreate,
+        private: isPrivate,
+        auto_init: true, // creates an initial commit so we can push .repomind files to it
+      }),
+    })
+
+    if (!createRes.ok) {
+      const errData = await createRes.json().catch(() => ({}))
+      return NextResponse.json(
+        { error: errData.message || "Failed to create repository on GitHub" },
+        { status: 400 }
+      )
+    }
+
+    const createdRepo = await createRes.json()
+    resolvedRepoFull = createdRepo.full_name
+  } else {
+    // Validate existing repo is accessible
+    const repoCheckRes = await fetch(
+      `https://api.github.com/repos/${resolvedRepoFull}`,
+      { headers: { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json" } }
     )
+    if (!repoCheckRes.ok) {
+      return NextResponse.json(
+        { error: repoCheckRes.status === 404 ? "Repository not found or not accessible" : "Could not access repository" },
+        { status: 400 }
+      )
+    }
   }
 
   // 1. Resolve default branch
   let defaultBranch = "main"
   try {
-    defaultBranch = await getDefaultBranch(repoFull, githubToken)
+    defaultBranch = await getDefaultBranch(resolvedRepoFull, githubToken)
   } catch (e) {
     console.error("[projects/POST] Could not get default branch:", e)
   }
@@ -76,7 +108,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_id: session.user.id,
       name,
-      repo_full: repoFull,
+      repo_full: resolvedRepoFull,
       slug,
       github_token: githubToken,
       default_branch: defaultBranch,
@@ -87,7 +119,7 @@ export async function POST(req: NextRequest) {
   if (projectError) return NextResponse.json({ error: projectError.message }, { status: 500 })
 
   // 3. Check if .repomind already exists in repo
-  const hasRepomind = await fileExists(repoFull, githubToken, defaultBranch, ".repomind/config.yml")
+  const hasRepomind = await fileExists(resolvedRepoFull, githubToken, defaultBranch, ".repomind/config.yml")
 
   if (!hasRepomind) {
     // 4a. Initialise .repomind folder structure
@@ -101,7 +133,7 @@ export async function POST(req: NextRequest) {
       const fileMap: Record<string, string> = {}
       for (const f of initFiles) fileMap[f.path] = f.content
       await githubAtomicWrite(
-        { repoFull, token: githubToken, branch: defaultBranch },
+        { repoFull: resolvedRepoFull, token: githubToken, branch: defaultBranch },
         fileMap,
         "chore(repomind): initialize .repomind"
       )
@@ -116,7 +148,7 @@ export async function POST(req: NextRequest) {
     try {
       const webhookUrl = `${process.env.APP_URL}/api/webhooks/github`
       const secret = process.env.GITHUB_WEBHOOK_SECRET || "dummy_secret"
-      const webhookId = await registerWebhook(repoFull, githubToken, webhookUrl, secret)
+      const webhookId = await registerWebhook(resolvedRepoFull, githubToken, webhookUrl, secret)
       await supabaseAdmin
         .from("projects")
         .update({ webhook_id: webhookId.toString() })

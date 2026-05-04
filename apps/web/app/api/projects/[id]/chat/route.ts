@@ -110,14 +110,15 @@ ${persona.extraRules.join("\n")}
     const reply = await callAgent("LYRA", {
       prompt: message,
       systemPrompt,
-      history: history.map((h: { role: string; content: string }) => ({
+      // Cap at last 20 messages to stay within context window
+      history: history.slice(-20).map((h: { role: string; content: string }) => ({
         role: h.role,
         content: h.content,
       })),
     })
     return NextResponse.json({ reply })
   } catch (err: any) {
-    console.error("[Chat] Gemini call failed:", err.message)
+    console.error("[Chat] AI call failed:", err.message)
     return NextResponse.json({ error: err.message || "Failed to generate response" }, { status: 500 })
   }
 }

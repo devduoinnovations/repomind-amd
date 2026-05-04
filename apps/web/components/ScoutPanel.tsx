@@ -24,15 +24,19 @@ const SEV_COLOR: Record<string, string> = {
 
 export function ScoutPanel({ projectId }: Props) {
   const [findings, setFindings] = useState<Finding[]>([])
+  const [loading, setLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const loadFindings = async () => {
+    setLoading(true)
     try {
       const res = await fetch(`/api/projects/${projectId}/repomind/scout`)
       const data = await res.json()
       setFindings(data.findings ?? [])
-    } catch { /* ignore */ }
+    } catch { /* ignore */ } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadFindings() }, [projectId])
@@ -115,7 +119,13 @@ export function ScoutPanel({ projectId }: Props) {
         </div>
       )}
 
-      {!scanning && findings.length === 0 && (
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '48px 0', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+          Loading findings...
+        </div>
+      )}
+
+      {!loading && !scanning && findings.length === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 0' }}>
           <div style={{ fontSize: 28, marginBottom: 10 }}>✓</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>

@@ -31,6 +31,7 @@ export async function GET() {
     const text = await res.text()
 
     const gpuCacheRaw = parsePrometheus(text, 'vllm:gpu_cache_usage_perc')
+    const cpuCacheRaw = parsePrometheus(text, 'vllm:cpu_cache_usage_perc')
     const tokSec = parsePrometheus(text, 'vllm:avg_generation_throughput_toks_per_s')
     const ttftSum = parsePrometheus(text, 'vllm:time_to_first_token_seconds_sum')
     const ttftCount = parsePrometheus(text, 'vllm:time_to_first_token_seconds_count')
@@ -39,7 +40,7 @@ export async function GET() {
     return NextResponse.json({
       available: true,
       gpu: Math.round(gpuCacheRaw * 100),
-      mem: Math.round(gpuCacheRaw * 100),
+      mem: Math.round(cpuCacheRaw * 100),
       tokSec: Math.round(tokSec),
       embedMs,
       model: process.env.NEXT_PUBLIC_GPU_MODEL ?? 'Qwen2.5-72B @ AMD MI300X',

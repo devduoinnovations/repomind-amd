@@ -32,6 +32,8 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
   const [repoSearch, setRepoSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [tokenWarning, setTokenWarning] = useState(false)
+  const [createNewRepo, setCreateNewRepo] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(true)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -54,8 +56,8 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim() || !repo.trim()) return
-    if (!repo.includes('/')) {
-      setError('Repo must be in owner/repo format')
+    if (!createNewRepo && !repo.includes('/')) {
+      setError('Existing repo must be in owner/repo format')
       return
     }
     setLoading(true)
@@ -64,7 +66,13 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), repoFull: repo.trim(), slug }),
+        body: JSON.stringify({
+          name: name.trim(),
+          repoFull: repo.trim(),
+          slug,
+          createNewRepo,
+          isPrivate,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create project')
@@ -139,31 +147,74 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
               </div>
             </div>
 
+            {/* Mode Toggle */}
+            <div className="flex p-1 bg-[var(--void)] border-2 border-[var(--border)] rounded-xl">
+              <button
+                type="button"
+                onClick={() => { setCreateNewRepo(false); setRepo('') }}
+                className={`flex-1 py-2.5 rounded-lg font-[var(--font-mono)] text-[10px] font-black tracking-widest transition-all ${!createNewRepo ? 'bg-[var(--brand)] text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+              >
+                IMPORT EXISTING
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCreateNewRepo(true); setRepo(slug) }}
+                className={`flex-1 py-2.5 rounded-lg font-[var(--font-mono)] text-[10px] font-black tracking-widest transition-all ${createNewRepo ? 'bg-[var(--brand)] text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+              >
+                CREATE NEW REPO
+              </button>
+            </div>
+
             {/* GitHub Repo */}
             <div className="space-y-2 relative">
-              <label className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold block ml-1">
-                GitHub Repository
-              </label>
+              <div className="flex justify-between items-center ml-1">
+                <label className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-bold block">
+                  {createNewRepo ? 'New GitHub Repo Name' : 'GitHub Repository'}
+                </label>
+                {createNewRepo && (
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={isPrivate}
+                      onChange={e => setIsPrivate(e.target.checked)}
+                      className="w-3 h-3 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--brand)]/20 accent-[var(--brand)]"
+                    />
+                    <span className="font-[var(--font-mono)] text-[9px] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors font-bold uppercase tracking-wider">
+                      PRIVATE
+                    </span>
+                  </label>
+                )}
+              </div>
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--brand)] transition-colors">
                   <Github size={18} />
                 </div>
                 <input
-                  value={repoSearch}
-                  onChange={e => { setRepoSearch(e.target.value); setRepo(e.target.value); setShowDropdown(true) }}
-                  onFocus={() => { loadRepos(); setShowDropdown(true) }}
+                  value={createNewRepo ? repo : repoSearch}
+                  onChange={e => {
+                    if (createNewRepo) {
+                      setRepo(e.target.value)
+                    } else {
+                      setRepoSearch(e.target.value)
+                      setRepo(e.target.value)
+                      setShowDropdown(true)
+                    }
+                  }}
+                  onFocus={() => { if (!createNewRepo) { loadRepos(); setShowDropdown(true) } }}
                   onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-                  placeholder="owner/repo or search..."
+                  placeholder={createNewRepo ? "e.g. my-new-repo" : "owner/repo or search..."}
                   className="w-full bg-[var(--void)] border-2 border-[var(--border)] focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand)]/10 rounded-xl pl-12 pr-10 py-3.5 font-[var(--font-mono)] text-sm text-[var(--text-primary)] outline-none transition-all placeholder:opacity-40"
                 />
-                <div className={`absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-transform duration-300 ${showDropdown ? 'rotate-180 text-[var(--brand)]' : ''}`}>
-                  <ChevronDown size={16} />
-                </div>
+                {!createNewRepo && (
+                  <div className={`absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-transform duration-300 ${showDropdown ? 'rotate-180 text-[var(--brand)]' : ''}`}>
+                    <ChevronDown size={16} />
+                  </div>
+                )}
               </div>
 
               {/* Dropdown Menu */}
               <AnimatePresence>
-                {showDropdown && (
+                {showDropdown && !createNewRepo && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -223,7 +274,7 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
                 >
                   <AlertCircle className="text-[var(--warning)] shrink-0 mt-0.5" size={16} />
                   <p className="font-[var(--font-mono)] text-[10px] leading-relaxed text-[var(--warning)]">
-                    <span className="font-bold">WARNING:</span> No GitHub token found. R-authenticate to enable autonomous scans and ticket suggestions.
+                    <span className="font-bold">WARNING:</span> No GitHub token found. Re-authenticate to enable autonomous scans and ticket suggestions.
                   </p>
                 </motion.div>
               )}
