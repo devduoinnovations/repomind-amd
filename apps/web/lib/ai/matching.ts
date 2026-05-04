@@ -1,4 +1,5 @@
-import { callGemini } from "./gemini";
+import { callAgent } from "./provider";
+import { PATCH_SYSTEM_PROMPT } from "./prompts";
 
 export interface TicketMatch {
   ticketId: string;
@@ -52,12 +53,10 @@ Return a JSON array of matches with confidence > 0.5 only:
 ]
 Respond with JSON only. Empty array if no strong matches.`;
 
-  const raw = await callGemini({
-    apiKey,
+  const raw = await callAgent("PATCH", {
     prompt,
-    systemPrompt: "You are an expert code reviewer. Return only valid JSON array, no markdown.",
+    systemPrompt: PATCH_SYSTEM_PROMPT,
     responseMimeType: "application/json",
-    temperature: 0.1,
   });
 
   try {

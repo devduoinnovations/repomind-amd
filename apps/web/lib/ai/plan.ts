@@ -1,4 +1,4 @@
-import { buildPlanDecompositionPrompt } from "./prompts";
+import { buildPlanDecompositionPrompt, SPARKY_SYSTEM_PROMPT } from "./prompts";
 import { RepoMindConfig } from "@/lib/repomind-config";
 
 export interface DecomposedTask {
@@ -40,14 +40,12 @@ export async function decomposePlan(
     epicFormat: config?.tickets?.epic_format,
   });
 
-  const { callGemini } = await import("./gemini");
+  const { callAgent } = await import("./provider");
 
-  const rawText = await callGemini({
-    apiKey,
+  const rawText = await callAgent("SPARKY", {
     prompt,
-    systemPrompt: "You are an expert project manager. Return only valid JSON, no markdown.",
+    systemPrompt: SPARKY_SYSTEM_PROMPT,
     responseMimeType: "application/json",
-    temperature: 0.2,
   });
 
   const jsonText = rawText.replace(/```json\n?|\n?```/g, "").trim();
