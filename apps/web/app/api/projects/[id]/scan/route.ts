@@ -157,6 +157,20 @@ export async function POST(
       .update({ config_cache: configCache, last_scan_at: new Date().toISOString() })
       .eq("id", id);
 
+    // Fire-and-forget: upsert module embeddings for RAG search
+    if (moduleGraph?.modules?.length > 0) {
+      import('@/lib/ai/embeddings').then(({ upsertModuleEmbeddings }) =>
+        upsertModuleEmbeddings(
+          id,
+          moduleGraph.modules.map((m: any) => ({
+            id: m.id,
+            path: m.path,
+            summary: m.summary ?? m.name ?? m.path,
+          }))
+        )
+      ).catch(err => console.error('[scan] embeddings upsert failed:', err))
+    }
+
     // Write scan results back to .repomind/architecture/ (non-fatal)
     if (token && moduleGraph && techStack) {
       try {

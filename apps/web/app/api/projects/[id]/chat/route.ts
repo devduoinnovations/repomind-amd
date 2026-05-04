@@ -43,12 +43,6 @@ export async function POST(
         configContext = `Project: "${ctx.config.project.name}" (slug: ${ctx.config.project.slug})
 Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
 
-        if (ctx.moduleGraph) {
-          const mg = ctx.moduleGraph as any
-          const modules = mg.modules?.slice(0, 30) ?? []
-          moduleContext = `Module Graph (${modules.length} modules):\n` +
-            modules.map((m: any) => `- ${m.id}: ${m.name} (${m.path})${m.summary ? ' — ' + m.summary : ''}`).join("\n")
-        }
         if (ctx.techStack) {
           const ts = ctx.techStack as any
           techContext = `Tech Stack: Languages: ${ts.languages?.join(", ") || "unknown"}, Frameworks: ${ts.frameworks?.join(", ") || "unknown"}`
@@ -56,6 +50,32 @@ Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
       }
     } catch {
       // fall through with no context
+    }
+  }
+
+  try {
+    const { searchModules } = await import('@/lib/ai/embeddings')
+    const topModules = await searchModules(id, message, 5)
+    if (topModules.length > 0) {
+      moduleContext = `Relevant modules (semantic search):\n` +
+        topModules.map(m =>
+          `- ${m.path} (${Math.round(m.score * 100)}% match): ${m.summary}`
+        ).join('\n')
+    }
+  } catch {
+    // Fallback to static first-30 if embeddings not available
+    if (token) {
+      try {
+        const ctx = await loadRepomindContext(project.repo_full, token, branch)
+        if (ctx?.moduleGraph) {
+          const mg = ctx.moduleGraph as any
+          const mods = mg.modules?.slice(0, 30) ?? []
+          moduleContext = `Module Graph (${mods.length} of ${mg.modules?.length ?? 0} modules):\n` +
+            mods.map((m: any) => `- ${m.id}: ${m.name} (${m.path})`).join('\n')
+        }
+      } catch {
+        // fall through with no moduleContext
+      }
     }
   }
 
