@@ -14,3 +14,10 @@ create table if not exists scout_findings (
 
 create index if not exists scout_findings_project_idx
   on scout_findings (project_id, severity, resolved);
+
+alter table scout_findings enable row level security;
+
+create policy "Users can manage own project findings" on scout_findings
+  for all using (
+    project_id in (select id from projects where user_id = auth.uid())
+  );

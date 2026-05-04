@@ -121,6 +121,15 @@ export async function GET(
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Verify ownership
+  const { data: project } = await supabaseAdmin
+    .from('projects')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .single()
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
   const { data: findings } = await supabaseAdmin
     .from('scout_findings')
     .select('*')
@@ -138,6 +147,15 @@ export async function PATCH(
   const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Verify ownership
+  const { data: project } = await supabaseAdmin
+    .from('projects')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .single()
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
   const { findingId } = await req.json()
   if (!findingId) return NextResponse.json({ error: 'findingId required' }, { status: 400 })
