@@ -1,7 +1,8 @@
 import { z } from "zod";
 export * from "./plan";
 export * from "./matching";
-import { CHANGELOG_SYSTEM_PROMPT } from "./prompts";
+import { NOVA_SYSTEM_PROMPT } from "./prompts";
+import { callAgent } from "./provider";
 
 export const changelogOutputSchema = z.object({
   version: z.string().nullable(),
@@ -30,25 +31,16 @@ export interface GeminiEmbeddingOptions {
   batchSize?: number;
 }
 
-import { callGemini } from "./gemini";
-
 export async function generateChangelog(
   userPrompt: string,
   options: GeminiClientOptions & { language?: string } = {}
 ): Promise<ChangelogOutput> {
-  const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set.");
-  }
+  const systemPrompt = options.systemPrompt ?? NOVA_SYSTEM_PROMPT;
 
-  const systemPrompt = options.systemPrompt ?? CHANGELOG_SYSTEM_PROMPT(options.language);
-
-  const resText = await callGemini({
-    apiKey,
+  const resText = await callAgent("NOVA", {
     prompt: userPrompt,
     systemPrompt,
     responseMimeType: "application/json",
-    temperature: options.temperature ?? 0.2,
   });
 
   const jsonText = resText.replace(/```json\n?|\n?```/g, "").trim();

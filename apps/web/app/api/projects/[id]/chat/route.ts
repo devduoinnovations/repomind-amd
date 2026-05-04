@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import { loadRepomindContext } from "@/lib/repomind-config"
 import { aiRateLimit, checkRateLimit } from "@/lib/rate-limit"
+import { LYRA_SYSTEM_PROMPT } from "@/lib/ai/prompts"
 
 export async function POST(
   req: Request,
@@ -68,8 +69,11 @@ Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
     ]
   }
 
-  const systemPrompt = `You are ${persona.name}, ${persona.role}
-  
+  const systemPrompt = `${LYRA_SYSTEM_PROMPT}
+
+Project context:
+You are ${persona.name}, ${persona.role}
+
 ${configContext}
 ${techContext}
 ${moduleContext}
@@ -83,18 +87,16 @@ ${persona.extraRules.join("\n")}
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not set" }, { status: 500 })
 
-  const { callGemini } = await import("@/lib/ai/gemini")
+  const { callAgent } = await import("@/lib/ai/provider")
 
   try {
-    const reply = await callGemini({
-      apiKey,
+    const reply = await callAgent("LYRA", {
       prompt: message,
       systemPrompt,
       history: history.map((h: { role: string; content: string }) => ({
-        role: h.role === "assistant" ? "model" : "user",
-        parts: [{ text: h.content }],
+        role: h.role,
+        content: h.content,
       })),
-      temperature: 0.3,
     })
     return NextResponse.json({ reply })
   } catch (err: any) {

@@ -43,7 +43,8 @@ function detectTechStack(paths: string[]) {
   return { languages, frameworks, databases, services, generated_at: new Date().toISOString() };
 }
 
-import { callGemini } from "@/lib/ai/gemini";
+import { callAgent } from "@/lib/ai/provider";
+import { SAGE_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 
 async function buildModuleGraph(sourcePaths: string[], apiKey: string) {
   const capped = sourcePaths.slice(0, 200);
@@ -62,12 +63,10 @@ Return JSON with this exact shape:
   "generated_at": "${new Date().toISOString()}"
 }`;
 
-  const resText = await callGemini({
-    apiKey,
+  const resText = await callAgent("SAGE", {
     prompt,
-    systemPrompt: "You are an expert software architect. Return only valid JSON, no markdown.",
+    systemPrompt: SAGE_SYSTEM_PROMPT,
     responseMimeType: "application/json",
-    temperature: 0.1,
   });
 
   const cleaned = resText.replace(/```json\n?|\n?```/g, "").trim();
