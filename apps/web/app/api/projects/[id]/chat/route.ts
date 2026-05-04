@@ -104,9 +104,6 @@ ${persona.extraRules.join("\n")}
 - If you don't know, say so — don't guess.
 - Format code in markdown code blocks.`
 
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not set" }, { status: 500 })
-
   const { callAgent } = await import("@/lib/ai/provider")
 
   try {

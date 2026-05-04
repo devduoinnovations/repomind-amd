@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { callAgent } from '@/lib/ai/provider'
 import { SCOUT_SYSTEM_PROMPT } from '@/lib/ai/prompts'
+import { scanRateLimit, checkRateLimit } from '@/lib/rate-limit'
+import { extractJSON } from '@/lib/ai'
 
 const SENSITIVE_PATTERNS = [
   /middleware\.(ts|js)$/,
@@ -20,6 +22,10 @@ export async function POST(
   const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Rate limit: reuse the scan limiter (3 per hour)
+  const rateCheck = await checkRateLimit(scanRateLimit, `scout:${session.user.id}`)
+  if (!rateCheck.allowed) return NextResponse.json({ error: `Rate limited. Try again in ${rateCheck.retryAfter}s.` }, { status: 429 })
 
   const { data: project } = await supabaseAdmin
     .from('projects')
@@ -80,17 +86,11 @@ export async function POST(
 
   let findings: any[] = []
   try {
-    const cleaned = raw.replace(/```json\n?|\n?```/g, '').trim()
-    findings = JSON.parse(cleaned)
+    findings = JSON.parse(extractJSON(raw))
     if (!Array.isArray(findings)) findings = []
   } catch { findings = [] }
 
-  await supabaseAdmin
-    .from('scout_findings')
-    .delete()
-    .eq('project_id', id)
-    .eq('resolved', false)
-
+  // Insert new findings first, THEN delete stale ones — prevents data loss on failure
   if (findings.length > 0) {
     await supabaseAdmin.from('scout_findings').insert(
       findings.map(f => ({
@@ -104,6 +104,14 @@ export async function POST(
       }))
     )
   }
+
+  // Now safe to remove the old unresolved findings
+  await supabaseAdmin
+    .from('scout_findings')
+    .delete()
+    .eq('project_id', id)
+    .eq('resolved', false)
+    .lt('created_at', new Date().toISOString())  // only rows older than this run
 
   return NextResponse.json({
     success: true,

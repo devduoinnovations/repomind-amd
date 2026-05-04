@@ -82,7 +82,7 @@ async function callOpenAICompat(
   params: Parameters<typeof callAgent>[1]
 ): Promise<string> {
   const url = `${cfg.baseUrl}/chat/completions`
-  
+
   const messages = []
   if (params.systemPrompt) {
     messages.push({ role: 'system', content: params.systemPrompt })
@@ -102,20 +102,35 @@ async function callOpenAICompat(
     body.response_format = { type: 'json_object' }
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${cfg.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  })
+  const maxRetries = 3
+  let lastError: Error | null = null
 
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`AMD vLLM failed: ${res.status} ${errText}`)
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cfg.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(`AMD vLLM failed: ${res.status} ${errText}`)
+      }
+
+      const data = await res.json()
+      return data.choices[0].message.content
+    } catch (err: any) {
+      lastError = err
+      if (attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(r => setTimeout(r, delay))
+      }
+    }
   }
 
-  const data = await res.json()
-  return data.choices[0].message.content
+  throw lastError || new Error('AMD vLLM call failed after retries')
 }

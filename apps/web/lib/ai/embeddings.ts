@@ -12,10 +12,20 @@ export async function upsertModuleEmbeddings(
 ): Promise<void> {
   if (modules.length === 0) return
 
-  const texts = modules.map(m => `${m.path}: ${m.summary}`)
+  // SAGE can generate duplicate short ids (e.g. two files named "utils.ts" in
+  // different dirs both get id "utils"). Deduplicate by using the full path as
+  // the canonical key — last occurrence wins.
+  const seen = new Map<string, { id: string; path: string; summary: string }>()
+  for (const m of modules) {
+    // Use path as the unique key (more stable than the AI-generated id)
+    seen.set(m.path, { ...m, id: m.id || m.path })
+  }
+  const deduped = Array.from(seen.values())
+
+  const texts = deduped.map(m => `${m.path}: ${m.summary}`)
   const vecs = await generateEmbeddings(texts)
 
-  const rows = modules.map((m, i) => ({
+  const rows = deduped.map((m, i) => ({
     id: m.id,
     project_id: projectId,
     path: m.path,

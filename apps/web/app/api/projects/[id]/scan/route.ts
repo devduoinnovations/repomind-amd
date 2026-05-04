@@ -45,8 +45,9 @@ function detectTechStack(paths: string[]) {
 
 import { callAgent } from "@/lib/ai/provider";
 import { SAGE_SYSTEM_PROMPT } from "@/lib/ai/prompts";
+import { extractJSON } from "@/lib/ai";
 
-async function buildModuleGraph(sourcePaths: string[], apiKey: string) {
+async function buildModuleGraph(sourcePaths: string[]) {
   const capped = sourcePaths.slice(0, 200);
 
   const prompt = `You are analyzing a software repository. Given these source file paths, generate a module dependency graph.
@@ -69,8 +70,7 @@ Return JSON with this exact shape:
     responseMimeType: "application/json",
   });
 
-  const cleaned = resText.replace(/```json\n?|\n?```/g, "").trim();
-  return JSON.parse(cleaned);
+  return JSON.parse(extractJSON(resText));
 }
 
 export async function POST(
@@ -108,11 +108,6 @@ export async function POST(
     return NextResponse.json({ error: "No GitHub token. Please reconnect your account." }, { status: 400 });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
-  }
-
   try {
     const branch = (project.default_branch as string) || "main";
     const allPaths = await fetchRepoFilePaths(project.repo_full, token, branch);
@@ -122,7 +117,7 @@ export async function POST(
     let techStack = detectTechStack(allPaths);
 
     try {
-      moduleGraph = await buildModuleGraph(sourcePaths, apiKey);
+      moduleGraph = await buildModuleGraph(sourcePaths);
     } catch (aiErr: any) {
       // STATIC FALLBACK: Build a basic graph without AI
       moduleGraph = {

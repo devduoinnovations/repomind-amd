@@ -1,5 +1,6 @@
 import { buildPlanDecompositionPrompt, SPARKY_SYSTEM_PROMPT } from "./prompts";
 import { RepoMindConfig } from "@/lib/repomind-config";
+import { extractJSON } from "@/lib/ai";
 
 export interface DecomposedTask {
   id: string;
@@ -28,11 +29,6 @@ export async function decomposePlan(
   moduleGraph: any,
   config?: RepoMindConfig
 ): Promise<DecomposedPlan> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set.");
-  }
-
   const prompt = buildPlanDecompositionPrompt(planText, moduleGraph, {
     tone: config?.ai?.tone,
     audience: config?.ai?.audience,
@@ -48,7 +44,7 @@ export async function decomposePlan(
     responseMimeType: "application/json",
   });
 
-  const jsonText = rawText.replace(/```json\n?|\n?```/g, "").trim();
+  const jsonText = extractJSON(rawText);
   const parsed = JSON.parse(jsonText) as DecomposedPlan;
 
   // Normalize fields to match Zod schema expectations (lowercase)

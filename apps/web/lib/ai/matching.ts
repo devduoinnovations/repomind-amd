@@ -1,5 +1,6 @@
 import { callAgent } from "./provider";
 import { PATCH_SYSTEM_PROMPT } from "./prompts";
+import { extractJSON } from "@/lib/ai";
 
 export interface TicketMatch {
   ticketId: string;
@@ -26,8 +27,6 @@ export async function matchCommitToTickets(
   commit: CommitInfo,
   candidates: CandidateTicket[]
 ): Promise<TicketMatch[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
   if (candidates.length === 0) return [];
 
   const prompt = `You are a RepoMind Intelligence Engine. Match the following Git commit to the most relevant engineering tickets.
@@ -60,8 +59,7 @@ Respond with JSON only. Empty array if no strong matches.`;
   });
 
   try {
-    const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
+    const parsed = JSON.parse(extractJSON(raw));
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
