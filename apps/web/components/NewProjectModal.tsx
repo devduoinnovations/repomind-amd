@@ -34,6 +34,7 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
   const [tokenWarning, setTokenWarning] = useState(false)
   const [createNewRepo, setCreateNewRepo] = useState(false)
   const [isPrivate, setIsPrivate] = useState(true)
+  const [autoReadme, setAutoReadme] = useState(true)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -72,6 +73,7 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
           slug,
           createNewRepo,
           isPrivate,
+          autoReadme,
         }),
       })
       const data = await res.json()
@@ -172,17 +174,30 @@ export function NewProjectModal({ onClose, onCreated }: Props) {
                   {createNewRepo ? 'New GitHub Repo Name' : 'GitHub Repository'}
                 </label>
                 {createNewRepo && (
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={isPrivate}
-                      onChange={e => setIsPrivate(e.target.checked)}
-                      className="w-3 h-3 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--brand)]/20 accent-[var(--brand)]"
-                    />
-                    <span className="font-[var(--font-mono)] text-[9px] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors font-bold uppercase tracking-wider">
-                      PRIVATE
-                    </span>
-                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={autoReadme}
+                        onChange={e => setAutoReadme(e.target.checked)}
+                        className="w-3 h-3 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--brand)]/20 accent-[var(--brand)]"
+                      />
+                      <span className="font-[var(--font-mono)] text-[9px] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors font-bold uppercase tracking-wider">
+                        CREATE README.MD
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={isPrivate}
+                        onChange={e => setIsPrivate(e.target.checked)}
+                        className="w-3 h-3 rounded border-[var(--border)] text-[var(--brand)] focus:ring-[var(--brand)]/20 accent-[var(--brand)]"
+                      />
+                      <span className="font-[var(--font-mono)] text-[9px] text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] transition-colors font-bold uppercase tracking-wider">
+                        PRIVATE
+                      </span>
+                    </label>
+                  </div>
                 )}
               </div>
               <div className="relative group">

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { name, repoFull, slug, createNewRepo, isPrivate = true } = await req.json()
+  const { name, repoFull, slug, createNewRepo, isPrivate = true, autoReadme = true } = await req.json()
   if (!name || !slug) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
@@ -132,16 +132,22 @@ export async function POST(req: NextRequest) {
       // githubAtomicWrite expects Record<string, string> — extract path/content from each WriteRepoFileInput
       const fileMap: Record<string, string> = {}
       for (const f of initFiles) fileMap[f.path] = f.content
+
+      // If user opted out of README, delete the one created by auto_init
+      const deleteFiles = (createNewRepo && !autoReadme) ? ["README.md"] : []
+
       await githubAtomicWrite(
         { repoFull: resolvedRepoFull, token: githubToken, branch: defaultBranch },
         fileMap,
-        "chore(repomind): initialize .repomind"
+        "chore(repomind): initialize .repomind",
+        deleteFiles
       )
     } catch (err) {
       console.error("[projects/POST] .repomind init failed:", err)
       // Non-fatal — project still created
     }
   }
+
 
   // 5. Register webhook (non-fatal)
   if (process.env.APP_URL) {
