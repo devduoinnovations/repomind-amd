@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { MascotSprite } from '@/components/mascots/MascotSprite'
+import { toast } from 'sonner'
 
 interface ArchData {
   lastScanAt: string | null
@@ -19,7 +20,6 @@ interface Props {
 export function ArchitecturePanel({ projectId }: Props) {
   const [data, setData] = useState<ArchData | null>(null)
   const [scanning, setScanning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const diagramRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function ArchitecturePanel({ projectId }: Props) {
     fetch(`/api/projects/${projectId}/architecture`)
       .then(r => r.json())
       .then(d => setData(d))
-      .catch(() => setError('Failed to load architecture data'))
+      .catch(() => toast.error('Failed to load architecture data'))
   }, [projectId])
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function ArchitecturePanel({ projectId }: Props) {
   const handleScan = async () => {
     if (!projectId || scanning) return
     setScanning(true)
-    setError(null)
+    const scanId = toast.loading('SAGE is mapping the codebase...')
     try {
       const res = await fetch(`/api/projects/${projectId}/scan`, { method: 'POST' })
       const result = await res.json()
@@ -67,8 +67,9 @@ export function ArchitecturePanel({ projectId }: Props) {
       // Reload arch data after scan
       const archRes = await fetch(`/api/projects/${projectId}/architecture`)
       setData(await archRes.json())
+      toast.success('Architecture mapped successfully', { id: scanId })
     } catch (err: any) {
-      setError(err.message)
+      toast.error(err.message, { id: scanId })
     } finally {
       setScanning(false)
     }
@@ -92,13 +93,8 @@ export function ArchitecturePanel({ projectId }: Props) {
           {scanning ? 'SAGE IS SCANNING...' : 'NO SCAN YET'}
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-          {scanning ? 'building module graph' : 'run a scan to map your architecture'}
+          {scanning ? 'This might take a moment. SAGE is analyzing ASTs and mapping dependencies.' : 'SAGE reads your codebase to generate a topological map and semantic embeddings.'}
         </div>
-        {error && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ef4444', textAlign: 'center', maxWidth: 400 }}>
-            {error}
-          </div>
-        )}
         {!scanning && (
           <button
             onClick={handleScan}
@@ -164,7 +160,6 @@ export function ArchitecturePanel({ projectId }: Props) {
 
       {/* Module graph */}
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-        {error && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ef4444', marginBottom: 8 }}>{error}</div>}
         {data?.codebase?.module_graph?.edges && data.codebase.module_graph.edges.length > 30 && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#f59e0b', marginBottom: 8, padding: '4px 8px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 4 }}>
             Showing 30 of {data.codebase.module_graph.edges.length} edges — diagram truncated

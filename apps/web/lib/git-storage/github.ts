@@ -190,72 +190,90 @@ export async function githubAtomicWrite(
     "Content-Type": "application/json",
   };
 
-  // 1. Get current branch tip
-  const refRes = await fetch(`${baseUrl}/git/refs/heads/${branch}`, { headers, cache: "no-store" });
-  if (!refRes.ok) throw new Error(`Atomic Write: Failed to get ref: ${refRes.status}`);
-  const refData = await refRes.json();
-  const baseSha = refData.object.sha;
+  const MAX_RETRIES = 3;
+  let attempt = 0;
 
-  // 2. Get the tree from the base commit
-  const commitRes = await fetch(`${baseUrl}/git/commits/${baseSha}`, { headers, cache: "no-store" });
-  if (!commitRes.ok) throw new Error(`Atomic Write: Failed to get commit: ${commitRes.status}`);
-  const commitData = await commitRes.json();
-  const baseTreeSha = commitData.tree.sha;
+  while (true) {
+    attempt++;
+    try {
+      // 1. Get current branch tip
+      const refRes = await fetch(`${baseUrl}/git/refs/heads/${branch}`, { headers, cache: "no-store" });
+      if (!refRes.ok) throw new Error(`Atomic Write: Failed to get ref: ${refRes.status}`);
+      const refData = await refRes.json();
+      const baseSha = refData.object.sha;
 
-  // 3. Create a new tree
-  const treeItems: Array<{ path: string; mode: string; type: string; content?: string; sha?: null }> = [
-    ...Object.entries(files).map(([path, content]) => ({
-      path,
-      mode: "100644",
-      type: "blob",
-      content,
-    })),
-    ...(deleteFiles ?? []).map((path) => ({
-      path,
-      mode: "100644",
-      type: "blob",
-      sha: null as null,
-    })),
-  ];
+      // 2. Get the tree from the base commit
+      const commitRes = await fetch(`${baseUrl}/git/commits/${baseSha}`, { headers, cache: "no-store" });
+      if (!commitRes.ok) throw new Error(`Atomic Write: Failed to get commit: ${commitRes.status}`);
+      const commitData = await commitRes.json();
+      const baseTreeSha = commitData.tree.sha;
 
-  const treeRes = await fetch(`${baseUrl}/git/trees`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      base_tree: baseTreeSha,
-      tree: treeItems,
-    }),
-  });
-  if (!treeRes.ok) throw new Error(`Atomic Write: Failed to create tree: ${treeRes.status}`);
-  const treeData = await treeRes.json();
-  const newTreeSha = treeData.sha;
+      // 3. Create a new tree
+      const treeItems: Array<{ path: string; mode: string; type: string; content?: string; sha?: null }> = [
+        ...Object.entries(files).map(([path, content]) => ({
+          path,
+          mode: "100644",
+          type: "blob",
+          content,
+        })),
+        ...(deleteFiles ?? []).map((path) => ({
+          path,
+          mode: "100644",
+          type: "blob",
+          sha: null as null,
+        })),
+      ];
 
-  // 4. Create the commit
-  const newCommitRes = await fetch(`${baseUrl}/git/commits`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      message,
-      tree: newTreeSha,
-      parents: [baseSha],
-    }),
-  });
-  if (!newCommitRes.ok) throw new Error(`Atomic Write: Failed to create commit: ${newCommitRes.status}`);
-  const newCommitData = await newCommitRes.json();
-  const newCommitSha = newCommitData.sha;
+      const treeRes = await fetch(`${baseUrl}/git/trees`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          base_tree: baseTreeSha,
+          tree: treeItems,
+        }),
+      });
+      if (!treeRes.ok) throw new Error(`Atomic Write: Failed to create tree: ${treeRes.status}`);
+      const treeData = await treeRes.json();
+      const newTreeSha = treeData.sha;
 
-  // 5. Update the ref
-  const updateRefRes = await fetch(`${baseUrl}/git/refs/heads/${branch}`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify({
-      sha: newCommitSha,
-      force: false,
-    }),
-  });
-  if (!updateRefRes.ok) {
-    const err = await updateRefRes.text();
-    throw new Error(`Atomic Write: Failed to update ref: ${updateRefRes.status} ${err}`);
+      // 4. Create the commit
+      const newCommitRes = await fetch(`${baseUrl}/git/commits`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          message,
+          tree: newTreeSha,
+          parents: [baseSha],
+        }),
+      });
+      if (!newCommitRes.ok) throw new Error(`Atomic Write: Failed to create commit: ${newCommitRes.status}`);
+      const newCommitData = await newCommitRes.json();
+      const newCommitSha = newCommitData.sha;
+
+      // 5. Update the ref
+      const updateRefRes = await fetch(`${baseUrl}/git/refs/heads/${branch}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          sha: newCommitSha,
+          force: false,
+        }),
+      });
+      
+      if (!updateRefRes.ok) {
+        if (updateRefRes.status === 422 && attempt < MAX_RETRIES) {
+          console.warn(`[GitHub] Fast-forward conflict detected on ${branch}. Retrying (attempt ${attempt}/${MAX_RETRIES})...`);
+          continue;
+        }
+        const err = await updateRefRes.text();
+        throw new Error(`Atomic Write: Failed to update ref: ${updateRefRes.status} ${err}`);
+      }
+      
+      break; // Success
+    } catch (err) {
+      if (attempt >= MAX_RETRIES) throw err;
+      throw err; // For now, only retry on 422 explicitly caught above
+    }
   }
 }
 

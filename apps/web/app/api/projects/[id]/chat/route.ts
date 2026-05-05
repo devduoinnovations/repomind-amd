@@ -17,8 +17,11 @@ export async function POST(
   const rateCheck = await checkRateLimit(aiRateLimit, session.user.id!)
   if (!rateCheck.allowed) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
 
-  const { message, history = [] } = await req.json()
-  if (!message) return NextResponse.json({ error: "No message" }, { status: 400 })
+  const { messages } = await req.json()
+  if (!messages || messages.length === 0) return NextResponse.json({ error: "No messages" }, { status: 400 })
+
+  const currentMessage = messages[messages.length - 1].content
+  const history = messages.slice(0, -1)
 
   const { data: project } = await supabaseAdmin
     .from("projects")
@@ -36,9 +39,10 @@ export async function POST(
   let techContext = ""
   let configContext = ""
 
+  let ctx: any = null
   if (token) {
     try {
-      const ctx = await loadRepomindContext(project.repo_full, token, branch)
+      ctx = await loadRepomindContext(project.repo_full, token, branch)
       if (ctx) {
         configContext = `Project: "${ctx.config.project.name}" (slug: ${ctx.config.project.slug})
 Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
@@ -55,7 +59,7 @@ Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
 
   try {
     const { searchModules } = await import('@/lib/ai/embeddings')
-    const topModules = await searchModules(id, message, 5)
+    const topModules = await searchModules(id, currentMessage, 5)
     if (topModules.length > 0) {
       moduleContext = `Relevant modules (semantic search):\n` +
         topModules.map(m =>
@@ -64,51 +68,26 @@ Tone: ${ctx.config.ai.tone}, Audience: ${ctx.config.ai.audience}`
     }
   } catch {
     // Fallback to static first-30 if embeddings not available
-    if (token) {
-      try {
-        const ctx = await loadRepomindContext(project.repo_full, token, branch)
-        if (ctx?.moduleGraph) {
-          const mg = ctx.moduleGraph as any
-          const mods = mg.modules?.slice(0, 30) ?? []
-          moduleContext = `Module Graph (${mods.length} of ${mg.modules?.length ?? 0} modules):\n` +
-            mods.map((m: any) => `- ${m.id}: ${m.name} (${m.path})`).join('\n')
-        }
-      } catch {
-        // fall through with no moduleContext
-      }
+    if (ctx?.moduleGraph) {
+      const mg = ctx.moduleGraph as any
+      const mods = mg.modules?.slice(0, 30) ?? []
+      moduleContext = `Module Graph (${mods.length} of ${mg.modules?.length ?? 0} modules):\n` +
+        mods.map((m: any) => `- ${m.id}: ${m.name} (${m.path})`).join('\n')
     }
-  }
-
-  const persona = {
-    name: "LYRA",
-    role: "the Librarian — a sharp, helpful AI agent who explains codebase architecture and structure.",
-    extraRules: [
-      "- Explain high-level concepts and relationships.",
-      "- Be precise and concise.",
-      "- Help navigate the module graph."
-    ]
   }
 
   const systemPrompt = `${LYRA_SYSTEM_PROMPT}
 
 Project context:
-You are ${persona.name}, ${persona.role}
-
 ${configContext}
 ${techContext}
-${moduleContext}
+${moduleContext}`
 
-Rules:
-${persona.extraRules.join("\n")}
-- Reference specific file paths and module names when relevant.
-- If you don't know, say so — don't guess.
-- Format code in markdown code blocks.`
-
-  const { callAgent } = await import("@/lib/ai/provider")
+  const { callAgentStream } = await import("@/lib/ai/provider")
 
   try {
-    const reply = await callAgent("LYRA", {
-      prompt: message,
+    const stream = await callAgentStream("LYRA", {
+      prompt: currentMessage,
       systemPrompt,
       // Cap at last 20 messages to stay within context window
       history: history.slice(-20).map((h: { role: string; content: string }) => ({
@@ -116,9 +95,9 @@ ${persona.extraRules.join("\n")}
         content: h.content,
       })),
     })
-    return NextResponse.json({ reply })
+    return stream
   } catch (err: any) {
-    console.error("[Chat] AI call failed:", err.message)
-    return NextResponse.json({ error: err.message || "Failed to generate response" }, { status: 500 })
+    console.error("[Chat] AI stream failed:", err.message)
+    return NextResponse.json({ error: err.message || "Failed to generate response stream" }, { status: 500 })
   }
 }

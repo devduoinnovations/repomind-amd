@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { stringify } from "yaml";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -109,92 +110,123 @@ export async function POST(
   }
 
   try {
-    const branch = (project.default_branch as string) || "main";
-    const allPaths = await fetchRepoFilePaths(project.repo_full, token, branch);
-    const sourcePaths = allPaths.filter(p => SOURCE_EXTS.test(p));
-
-    let moduleGraph;
-    let techStack = detectTechStack(allPaths);
-
-    try {
-      moduleGraph = await buildModuleGraph(sourcePaths);
-    } catch (aiErr: any) {
-      // STATIC FALLBACK: Build a basic graph without AI
-      moduleGraph = {
-        modules: sourcePaths.slice(0, 50).map(p => {
-          const id = p.split("/").pop()?.split(".")[0] || p;
-          return {
-            id,
-            name: id.toUpperCase(),
-            path: p,
-            summary: "Source module detected via static scan.",
-            dependencies: []
-          };
-        }),
-        generated_at: new Date().toISOString(),
-        is_static: true
-      };
-    }
-
-    const configCache = {
+    // Set status to scanning
+    const initialCache = {
       ...((project.config_cache as object) || {}),
-      codebase: {
-        module_graph: moduleGraph,
-        tech_stack: techStack,
-        file_count: allPaths.length,
-        source_file_count: sourcePaths.length,
-        scanned_at: new Date().toISOString(),
-      },
+      scan_status: "scanning"
     };
-
+    
     await supabaseAdmin
       .from("projects")
-      .update({ config_cache: configCache, last_scan_at: new Date().toISOString() })
+      .update({ config_cache: initialCache })
       .eq("id", id);
 
-    // Fire-and-forget: upsert module embeddings for RAG search
-    if (moduleGraph?.modules?.length > 0) {
-      import('@/lib/ai/embeddings').then(({ upsertModuleEmbeddings }) =>
-        upsertModuleEmbeddings(
-          id,
-          moduleGraph.modules.map((m: any) => ({
-            id: m.id,
-            path: m.path,
-            summary: m.summary ?? m.name ?? m.path,
-          }))
-        )
-      ).catch(err => console.error('[scan] embeddings upsert failed:', err))
-    }
-
-    // Write scan results back to .repomind/architecture/ (non-fatal)
-    if (token && moduleGraph && techStack) {
+    // Run heavy work in background
+    after(async () => {
       try {
-        await githubAtomicWrite(
-          { repoFull: project.repo_full, token, branch },
-          {
-            ".repomind/architecture/modules.json": JSON.stringify(moduleGraph, null, 2) + "\n",
-            ".repomind/architecture/tech-stack.yml": stringify(techStack),
-          },
-          "chore(repomind): update architecture scan results"
-        );
-      } catch (writeErr) {
-        console.error("[scan] Failed to write back to .repomind:", writeErr);
-      }
-    }
+        const branch = (project.default_branch as string) || "main";
+        const allPaths = await fetchRepoFilePaths(project.repo_full, token, branch);
+        const sourcePaths = allPaths.filter(p => SOURCE_EXTS.test(p));
 
-    const { data: owner } = await supabaseAdmin.from("users").select("email, name").eq("id", session.user.id).single();
-    if (owner?.email) {
-      const { sendScanCompleteEmail } = await import("@/lib/email");
-      sendScanCompleteEmail(owner.email, project.name, moduleGraph.modules?.length ?? 0).catch(() => {});
-    }
+        let moduleGraph;
+        let techStack = detectTechStack(allPaths);
+
+        try {
+          moduleGraph = await buildModuleGraph(sourcePaths);
+        } catch (aiErr: any) {
+          // STATIC FALLBACK: Build a basic graph without AI
+          moduleGraph = {
+            modules: sourcePaths.slice(0, 50).map(p => {
+              const fileId = p.split("/").pop()?.split(".")[0] || p;
+              return {
+                id: fileId,
+                name: fileId.toUpperCase(),
+                path: p,
+                summary: "Source module detected via static scan.",
+                dependencies: []
+              };
+            }),
+            generated_at: new Date().toISOString(),
+            is_static: true
+          };
+        }
+
+        // Re-fetch project to ensure we don't overwrite other config_cache updates
+        const { data: latestProject } = await supabaseAdmin
+          .from("projects")
+          .select("config_cache")
+          .eq("id", id)
+          .single();
+
+        const configCache = {
+          ...((latestProject?.config_cache as object) || {}),
+          scan_status: "idle",
+          codebase: {
+            module_graph: moduleGraph,
+            tech_stack: techStack,
+            file_count: allPaths.length,
+            source_file_count: sourcePaths.length,
+            scanned_at: new Date().toISOString(),
+          },
+        };
+
+        await supabaseAdmin
+          .from("projects")
+          .update({ config_cache: configCache, last_scan_at: new Date().toISOString() })
+          .eq("id", id);
+
+        // Fire-and-forget: upsert module embeddings for RAG search
+        if (moduleGraph?.modules?.length > 0) {
+          import('@/lib/ai/embeddings').then(({ upsertModuleEmbeddings }) =>
+            upsertModuleEmbeddings(
+              id,
+              moduleGraph.modules.map((m: any) => ({
+                id: m.id,
+                path: m.path,
+                summary: m.summary ?? m.name ?? m.path,
+              }))
+            )
+          ).catch(err => console.error('[scan] embeddings upsert failed:', err))
+        }
+
+        // Write scan results back to .repomind/architecture/ (non-fatal)
+        if (token && moduleGraph && techStack) {
+          try {
+            await githubAtomicWrite(
+              { repoFull: project.repo_full, token, branch },
+              {
+                ".repomind/architecture/modules.json": JSON.stringify(moduleGraph, null, 2) + "\n",
+                ".repomind/architecture/tech-stack.yml": stringify(techStack),
+              },
+              "chore(repomind): update architecture scan results"
+            );
+          } catch (writeErr) {
+            console.error("[scan] Failed to write back to .repomind:", writeErr);
+          }
+        }
+
+        const { data: owner } = await supabaseAdmin.from("users").select("email, name").eq("id", session.user.id).single();
+        if (owner?.email) {
+          const { sendScanCompleteEmail } = await import("@/lib/email");
+          sendScanCompleteEmail(owner.email, project.name, moduleGraph.modules?.length ?? 0).catch(() => {});
+        }
+      } catch (err) {
+        console.error("[scan] Background job failed", err);
+        // Set back to error state
+        const { data: errProject } = await supabaseAdmin.from("projects").select("config_cache").eq("id", id).single();
+        if (errProject) {
+          await supabaseAdmin.from("projects").update({
+            config_cache: { ...((errProject.config_cache as object) || {}), scan_status: "error" }
+          }).eq("id", id);
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      moduleCount: moduleGraph.modules?.length ?? 0,
-      fileCount: allPaths.length,
-      techStack,
-      isPartial: sourcePaths.length > 200,
-    });
+      message: "Scan started in background",
+      status: "scanning"
+    }, { status: 202 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Scan failed";
     console.error("[scan]", msg);

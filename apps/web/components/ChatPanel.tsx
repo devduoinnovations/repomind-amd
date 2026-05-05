@@ -73,19 +73,56 @@ export function ChatPanel({ projectId }: Props) {
     const next: Message[] = [...messages, { role: 'user', content: text }]
     setMessages(next)
     setLoading(true)
+
     try {
       const res = await fetch(`/api/projects/${projectId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: messages }),
+        body: JSON.stringify({ messages: next }),
       })
-      const data = await res.json()
-      setMessages(m => [...m, { role: 'assistant', content: data.reply ?? data.error ?? 'Error' }])
+      
+      if (!res.ok) throw new Error('Network response was not ok')
+      
+      // Initialize empty assistant message
+      setMessages(m => [...m, { role: 'assistant', content: '' }])
+      
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let done = false
+      let fullText = ''
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read()
+        done = doneReading
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true })
+          fullText += chunk
+          setMessages(m => {
+            const copy = [...m]
+            if (copy[copy.length - 1].role === 'assistant') {
+              copy[copy.length - 1].content = fullText
+            }
+            return copy
+          })
+        }
+      }
     } catch {
-      setMessages(m => [...m, { role: 'assistant', content: 'Network error. Try again.' }])
+      setMessages(m => {
+        if (m[m.length - 1]?.role === 'assistant' && m[m.length - 1].content === '') {
+          const copy = [...m]
+          copy[copy.length - 1].content = 'Network error. Try again.'
+          return copy
+        }
+        return [...m, { role: 'assistant', content: 'Network error. Try again.' }]
+      })
     } finally {
       setLoading(false)
     }
+  }
+
+  function appendSuggestion(q: string) {
+    setInput(q)
+    // We optionally could send directly, but letting them hit Enter is fine
   }
 
   return (
@@ -115,7 +152,7 @@ export function ChatPanel({ projectId }: Props) {
                 {suggestedQuestions.map(q => (
                   <button
                     key={q}
-                    onClick={() => { setInput(q); }}
+                    onClick={() => appendSuggestion(q)}
                     style={{
                       background: 'var(--surface)',
                       border: '1px solid var(--border)',
@@ -154,7 +191,7 @@ export function ChatPanel({ projectId }: Props) {
             </div>
           </div>
         ))}
-        {loading && (
+        {loading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#60a5fa' }}>
               LYRA is thinking▊

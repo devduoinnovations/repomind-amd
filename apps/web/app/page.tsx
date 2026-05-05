@@ -241,14 +241,20 @@ export default function App() {
     if (!selectedProject) return
     setTickets(ts => ts.map(t => t.id === ticketId ? { ...t, status: newStatus as Ticket['status'] } : t))
     try {
-      await fetch(`/api/projects/${selectedProject.id}/repomind/tickets/${ticketId}`, {
+      const res = await fetch(`/api/projects/${selectedProject.id}/repomind/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus.toLowerCase().replace(/_/g, '-'), path: ticketPath }),
       })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to update ticket')
+      }
       toast('Ticket moved', 'success')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update ticket:', err)
+      toast(`Failed to move ticket: ${err.message}`, 'error')
+      // Revert on failure
       loadTickets(selectedProject.id)
     }
   }
@@ -448,14 +454,32 @@ export default function App() {
                 setFeed(f => [{ color: '#22c55e', text: 'SCOUT scanning new repo…', agent: 'SCOUT', detail: 'scanning new repo…', ago: 'now' }, ...f])
                 try {
                   const res = await fetch(`/api/projects/${project.id}/scan`, { method: 'POST' })
-                  const data = await res.json()
                   if (res.ok) {
-                    setFeed(f => [
-                      { color: '#22c55e', text: `SCOUT indexed ${data.moduleCount} modules`, agent: 'SCOUT', detail: `indexed ${data.moduleCount} modules`, ago: 'now' },
-                      ...f,
-                    ])
-                    setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))
-                    setTimeout(() => setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'idle' } : x)), 3000)
+                    // Polling logic
+                    const interval = setInterval(async () => {
+                      try {
+                        const projRes = await fetch(`/api/projects/${project.id}`)
+                        if (!projRes.ok) return
+                        const projData = await projRes.json()
+                        const status = projData.config_cache?.scan_status
+
+                        if (status === 'idle') {
+                          clearInterval(interval)
+                          const count = projData.config_cache?.codebase?.module_graph?.modules?.length ?? 0
+                          setFeed(f => [
+                            { color: '#22c55e', text: `SCOUT indexed ${count} modules`, agent: 'SCOUT', detail: `indexed ${count} modules`, ago: 'now' },
+                            ...f,
+                          ])
+                          setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'done' } : x))
+                          setTimeout(() => setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'idle' } : x)), 3000)
+                        } else if (status === 'error') {
+                          clearInterval(interval)
+                          setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'error' } : x))
+                        }
+                      } catch (e) {
+                        // ignore network errors during polling
+                      }
+                    }, 3000)
                   }
                 } catch {
                   setAgents(a => a.map(x => x.name === 'SCOUT' ? { ...x, status: 'error' } : x))

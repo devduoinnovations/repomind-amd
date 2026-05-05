@@ -52,6 +52,53 @@ export async function callAgent(
   return callGeminiAgent(cfg, params)
 }
 
+// Stream version of callAgent for Chat UI
+export async function callAgentStream(
+  agent: string,
+  params: {
+    prompt: string
+    systemPrompt: string
+    history?: { role: string; content: string }[]
+  }
+): Promise<Response> {
+  const cfg = getAgentConfig(agent)
+  const { streamText } = await import('ai')
+  
+  const messages: any[] = []
+  if (params.systemPrompt) {
+    messages.push({ role: 'system', content: params.systemPrompt })
+  }
+  if (params.history) {
+    messages.push(...params.history)
+  }
+  messages.push({ role: 'user', content: params.prompt })
+
+  if (cfg.provider === 'openai-compat') {
+    const { createOpenAI } = await import('@ai-sdk/openai')
+    const openai = createOpenAI({
+      baseURL: cfg.baseUrl,
+      apiKey: cfg.apiKey,
+    })
+    const result = streamText({
+      model: openai(cfg.model),
+      messages,
+      temperature: cfg.temperature,
+    })
+    return result.toTextStreamResponse()
+  } else {
+    const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) throw new Error('GEMINI_API_KEY not set')
+    const google = createGoogleGenerativeAI({ apiKey })
+    const result = streamText({
+      model: google(cfg.model),
+      messages,
+      temperature: cfg.temperature,
+    })
+    return result.toTextStreamResponse()
+  }
+}
+
 async function callGeminiAgent(
   cfg: AgentConfig,
   params: Parameters<typeof callAgent>[1]

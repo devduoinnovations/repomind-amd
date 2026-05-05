@@ -36,11 +36,33 @@ export function AgentModal({ agentName, agents, onClose, selectedProjectId, onSc
       const res = await fetch(`/api/projects/${selectedProjectId}/scan`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Scan failed')
-      setScanResult({ moduleCount: data.moduleCount, fileCount: data.fileCount })
-      onScanComplete?.({ moduleCount: data.moduleCount, fileCount: data.fileCount })
+      
+      // Poll for completion
+      const interval = setInterval(async () => {
+        try {
+          const projRes = await fetch(`/api/projects/${selectedProjectId}`)
+          if (!projRes.ok) return
+          const projData = await projRes.json()
+          const status = projData.config_cache?.scan_status
+
+          if (status === 'idle') {
+            clearInterval(interval)
+            const moduleCount = projData.config_cache?.codebase?.module_graph?.modules?.length ?? 0
+            const fileCount = projData.config_cache?.codebase?.file_count ?? 0
+            setScanResult({ moduleCount, fileCount })
+            onScanComplete?.({ moduleCount, fileCount })
+            setScanning(false)
+          } else if (status === 'error') {
+            clearInterval(interval)
+            setScanError('Background scan failed')
+            setScanning(false)
+          }
+        } catch (e) {
+          // ignore network error
+        }
+      }, 3000)
     } catch (err: any) {
       setScanError(err.message)
-    } finally {
       setScanning(false)
     }
   }

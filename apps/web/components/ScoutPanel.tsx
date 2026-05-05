@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 interface Finding {
   id: string
@@ -26,7 +27,6 @@ export function ScoutPanel({ projectId }: Props) {
   const [findings, setFindings] = useState<Finding[]>([])
   const [loading, setLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const loadFindings = async () => {
     setLoading(true)
@@ -43,26 +43,33 @@ export function ScoutPanel({ projectId }: Props) {
 
   const runScan = async () => {
     setScanning(true)
-    setError(null)
+    const scanId = toast.loading('SCOUT is scanning for vulnerabilities...')
     try {
       const res = await fetch(`/api/projects/${projectId}/repomind/scout`, { method: 'POST' })
       const data = await res.json()
-      if (!res.ok) { setError(data.error ?? 'Scan failed'); return }
+      if (!res.ok) throw new Error(data.error ?? 'Scan failed')
       await loadFindings()
+      toast.success('Security scan completed', { id: scanId })
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message, { id: scanId })
     } finally {
       setScanning(false)
     }
   }
 
   const markResolved = async (findingId: string) => {
-    await fetch(`/api/projects/${projectId}/repomind/scout`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ findingId }),
-    })
-    setFindings(f => f.filter(x => x.id !== findingId))
+    const resId = toast.loading('Marking as resolved...')
+    try {
+      await fetch(`/api/projects/${projectId}/repomind/scout`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findingId }),
+      })
+      setFindings(f => f.filter(x => x.id !== findingId))
+      toast.success('Finding resolved', { id: resId })
+    } catch (err: any) {
+      toast.error('Failed to resolve finding', { id: resId })
+    }
   }
 
   const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 }
@@ -107,11 +114,6 @@ export function ScoutPanel({ projectId }: Props) {
         ))}
       </div>
 
-      {error && (
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ef4444', marginBottom: 16, padding: '8px 12px', border: '1px solid #ef444440', borderRadius: 6 }}>
-          {error}
-        </div>
-      )}
 
       {scanning && (
         <div style={{ textAlign: 'center', padding: '48px 0', fontFamily: 'var(--font-mono)', fontSize: 12, color: '#22c55e', letterSpacing: '0.06em' }}>
@@ -126,11 +128,25 @@ export function ScoutPanel({ projectId }: Props) {
       )}
 
       {!loading && !scanning && findings.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 0' }}>
-          <div style={{ fontSize: 28, marginBottom: 10 }}>✓</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
-            No active vulnerabilities. Run a scan to check.
+        <div style={{ textAlign: 'center', padding: '64px 24px', background: 'var(--void)', border: '1px dashed var(--border)', borderRadius: 12 }}>
+          <div style={{ fontSize: 32, marginBottom: 16, color: '#22c55e' }}>🛡️</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text-primary)', marginBottom: 8 }}>
+            NO VULNERABILITIES FOUND
           </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
+            SCOUT scans package configs, env files, and secrets. Run a scan to ensure your architecture is secure.
+          </div>
+          <button
+            onClick={runScan}
+            style={{
+              fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.08em',
+              padding: '10px 24px', border: 'none', borderRadius: 6,
+              background: '#22c55e', color: '#04040e', cursor: 'pointer',
+              boxShadow: '0 0 24px rgba(34,197,94,0.3)',
+            }}
+          >
+            RUN SECURITY SCAN
+          </button>
         </div>
       )}
 

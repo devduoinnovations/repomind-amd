@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Bebas_Neue, Syne, JetBrains_Mono, Instrument_Serif } from 'next/font/google'
 import { Providers } from '@/components/Providers'
+import { Toaster } from 'sonner'
+import { CommandPalette } from '@/components/CommandPalette'
 import './globals.css'
 
 const bebasNeue = Bebas_Neue({
@@ -44,7 +46,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${bebasNeue.variable} ${syne.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
       suppressHydrationWarning
     >
-      <body suppressHydrationWarning><Providers>{children}</Providers></body>
+      <body suppressHydrationWarning>
+        <Providers>
+          {children}
+          <Toaster theme="dark" position="bottom-right" />
+          <CommandPalette />
+        </Providers>
+      </body>
     </html>
   )
 }
