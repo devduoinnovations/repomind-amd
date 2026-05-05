@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { TeamPanel } from '@/components/TeamPanel'
+import { ChevronLeft, Save, Trash2, User, Users, AlertTriangle } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function SettingsPage() {
   const { data: session } = useSession()
@@ -45,91 +47,137 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 24px', fontFamily: 'var(--font-mono)' }}>
-      <h1 style={{ fontSize: 20, color: 'var(--text-primary)', marginBottom: 32, letterSpacing: '0.04em' }}>
-        SETTINGS
-      </h1>
-
-      {/* Profile */}
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 16 }}>PROFILE</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Display Name</label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              style={{
-                width: '100%', padding: '8px 12px', background: 'var(--surface)',
-                border: '1px solid var(--border)', borderRadius: 6,
-                color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 13,
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>GitHub Account</label>
-            <div style={{ fontSize: 13, color: 'var(--text-primary)', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6 }}>
-              {session?.user?.email ?? '—'}
-            </div>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              alignSelf: 'flex-start', padding: '8px 20px', background: 'rgba(96,165,250,0.2)',
-              color: '#60a5fa', border: '1px solid rgba(96,165,250,0.4)',
-              borderRadius: 6, cursor: 'pointer', fontSize: 12, letterSpacing: '0.06em',
-            }}
+    <div className="min-h-screen bg-[var(--void)] text-[var(--text-primary)] font-[var(--font-mono)] py-12 px-6">
+      <div className="max-w-3xl mx-auto space-y-12">
+        
+        {/* Navigation Header (Sticky) */}
+        <div className="sticky top-0 z-50 bg-[var(--void)]/80 backdrop-blur-xl -mx-6 px-6 py-6 border-b border-[var(--border)] mb-12 flex items-center justify-between">
+          <button 
+            onClick={() => router.push('/')}
+            className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--brand)] transition-colors group"
           >
-            {saved ? 'SAVED ✓' : saving ? 'SAVING…' : 'SAVE CHANGES'}
-          </button>
-        </div>
-      </section>
-
-      {/* Team */}
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 16 }}>TEAM</h2>
-        {projects.length === 0 ? (
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No projects yet.</div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              {projects.map((p: any) => (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedProjectId(p.id)}
-                  style={{
-                    padding: '4px 10px', borderRadius: 4, fontSize: 11, fontFamily: 'var(--font-mono)',
-                    background: selectedProjectId === p.id ? 'rgba(96,165,250,0.2)' : 'var(--surface)',
-                    color: selectedProjectId === p.id ? '#60a5fa' : 'var(--text-muted)',
-                    border: `1px solid ${selectedProjectId === p.id ? 'rgba(96,165,250,0.4)' : 'var(--border)'}`,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {p.name}
-                </button>
-              ))}
+            <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center group-hover:border-[var(--brand)]/50 transition-all">
+              <ChevronLeft size={16} />
             </div>
-            {selectedProjectId && <TeamPanel projectId={selectedProjectId} isOwner={true} />}
-          </>
-        )}
-      </section>
+            <span className="text-[10px] font-black tracking-[0.2em] uppercase">Back to Dashboard</span>
+          </button>
+          <div className="flex items-center gap-4">
+             <div className="w-2 h-2 rounded-full bg-[var(--brand)] shadow-[0_0_8px_var(--brand)] animate-pulse" />
+             <h1 className="text-2xl font-black tracking-[0.3em] uppercase drop-shadow-2xl">Settings</h1>
+          </div>
+        </div>
 
-      {/* Danger Zone */}
-      <section>
-        <h2 style={{ fontSize: 12, color: '#ef4444', letterSpacing: '0.08em', marginBottom: 16 }}>DANGER ZONE</h2>
-        <button
-          onClick={handleDeleteAccount}
-          style={{
-            padding: '8px 20px', background: 'rgba(239,68,68,0.1)',
-            color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 6, cursor: 'pointer', fontSize: 12, letterSpacing: '0.06em',
-          }}
+        {/* Profile Section */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-glass p-8 rounded-2xl border border-[var(--border)] relative overflow-hidden"
         >
-          DELETE ACCOUNT
-        </button>
-      </section>
+          <div className="absolute top-0 left-0 w-1 h-full bg-[var(--agent-sparky)] shadow-[0_0_15px_var(--agent-sparky)]" />
+          <div className="flex items-center gap-3 mb-8">
+            <User size={16} className="text-[var(--agent-sparky)]" />
+            <h2 className="text-xs font-black tracking-[0.2em] text-[var(--text-muted)] uppercase">System Identity</h2>
+          </div>
+
+          <div className="grid gap-8 max-w-md">
+            <div>
+              <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-black mb-3 block">Display Name</label>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="w-full bg-[var(--void)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-black mb-3 block">Primary Node (Email)</label>
+              <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-sm text-[var(--text-muted)] opacity-60">
+                {session?.user?.email ?? 'anonymous@repomind.ai'}
+              </div>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className={`
+                flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] tracking-widest uppercase transition-all
+                ${saved ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-[var(--brand)]/10 text-[var(--brand)] border border-[var(--brand)]/30 hover:bg-[var(--brand)]/20 active:scale-95'}
+              `}
+            >
+              <Save size={14} />
+              {saved ? 'Changes Synced' : saving ? 'Syncing...' : 'Update Identity'}
+            </button>
+          </div>
+        </motion.section>
+
+        {/* Team Management */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-glass p-8 rounded-2xl border border-[var(--border)] relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 w-1 h-full bg-[var(--agent-patch)] shadow-[0_0_15px_var(--agent-patch)]" />
+          <div className="flex items-center gap-3 mb-8">
+            <Users size={16} className="text-[var(--agent-patch)]" />
+            <h2 className="text-xs font-black tracking-[0.2em] text-[var(--text-muted)] uppercase">Fleet Management</h2>
+          </div>
+
+          {projects.length === 0 ? (
+            <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest text-center py-12 border-2 border-dashed border-[var(--border)] rounded-2xl">
+              No active fleets deployed
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-3 mb-8 overflow-x-auto pb-4 scrollbar-hide">
+                {projects.map((p: any) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedProjectId(p.id)}
+                    className={`
+                      px-4 py-2 rounded-lg text-[9px] font-black tracking-widest uppercase transition-all whitespace-nowrap border
+                      ${selectedProjectId === p.id 
+                        ? 'bg-[var(--agent-patch)]/20 text-[var(--agent-patch)] border-[var(--agent-patch)] shadow-[0_0_15px_rgba(20,184,166,0.1)]' 
+                        : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:border-[var(--brand)]/50'}
+                    `}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+              <div className="bg-[var(--void)]/50 rounded-2xl border border-[var(--border)] p-1">
+                {selectedProjectId && <TeamPanel projectId={selectedProjectId} isOwner={true} />}
+              </div>
+            </>
+          )}
+        </motion.section>
+
+        {/* Danger Zone */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-glass p-8 rounded-2xl border border-red-500/10 relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 w-1 h-full bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+          <div className="flex items-center gap-3 mb-8">
+            <AlertTriangle size={16} className="text-red-500" />
+            <h2 className="text-xs font-black tracking-[0.2em] text-red-500/80 uppercase">Destruction Core</h2>
+          </div>
+
+          <div className="max-w-md">
+            <p className="text-[11px] text-[var(--text-muted)] mb-8 leading-relaxed opacity-60">
+              Permanently de-initialize your account and purge all associated project metadata. This action is irreversible.
+            </p>
+            <button
+              onClick={handleDeleteAccount}
+              className="flex items-center gap-2 px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl font-black text-[10px] tracking-widest uppercase hover:bg-red-500/20 active:scale-95 transition-all"
+            >
+              <Trash2 size={14} />
+              Terminate Account
+            </button>
+          </div>
+        </motion.section>
+
+      </div>
     </div>
   )
 }

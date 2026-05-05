@@ -34,7 +34,7 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
   const [owner, repo] = (selectedProject?.repo_full || 'select / project').split('/')
 
   return (
-    <header className="h-20 px-8 flex items-center justify-between bg-glass border-b border-[var(--border)] z-50 sticky top-0 shadow-2xl overflow-hidden">
+    <header className="h-20 px-8 flex items-center justify-between bg-glass border-b border-[var(--border)] z-50 sticky top-0 shadow-2xl">
       {/* Header Accent Line */}
       <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[var(--brand)]/30 to-transparent" />
 
@@ -81,7 +81,7 @@ export function Topbar({ gpu, onAmdClick, projects, selectedProject, onSelectPro
           </div>
 
           {open && (
-            <div className="absolute top-[calc(100%+12px)] left-0 bg-[var(--surface)] border-2 border-[var(--brand)]/20 rounded-2xl overflow-hidden min-w-[280px] shadow-2xl z-200 animate-entrance backdrop-blur-xl">
+            <div className="absolute top-[calc(100%+12px)] left-0 bg-[var(--surface)] border-2 border-[var(--brand)]/20 rounded-2xl overflow-hidden min-w-[280px] shadow-2xl z-[100] animate-entrance backdrop-blur-xl">
               <div className="p-3 border-b border-[var(--border)] bg-[var(--void)]/50">
                  <span className="font-[var(--font-mono)] text-[9px] font-black tracking-widest text-[var(--text-muted)] opacity-50">AVAILABLE PROJECTS</span>
               </div>
