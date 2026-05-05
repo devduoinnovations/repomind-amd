@@ -95,7 +95,7 @@ async function runPatchMatching(project: any, branch: string, commits: any[]) {
         description: t.description ?? "", status: t.status,
       }))
     );
-    await saveSuggestions(project.id, commit.id, commit.message, matches, ticketPaths);
+    await saveSuggestions(project.id, commit.id, commit.message, matches, ticketPaths, openTickets);
   }
 }
 

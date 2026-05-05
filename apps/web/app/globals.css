@@ -1,146 +1,92 @@
 @import "tailwindcss";
 
 /* =============================================================
-   RepoMind Design Tokens — Cyberpunk Anime Terminal
+   RepoMind Design System — Modern Dual-Theme
    ============================================================= */
 
 :root {
-  /* Backgrounds */
-  --void:    #04040e;
-  --panel:   #09091a;
-  --surface: #0f0f22;
-  --hover:   #141428;
-
-  /* Borders */
-  --border:       rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.14);
-  --border-focus: rgba(255, 255, 255, 0.25);
-
-  /* Text */
-  --text-primary:   #ece9ff;
-  --text-secondary: #8b8aaa;
-  --text-muted:     #4e4b6a;
-  --text-code:      #a5f3a5;
-
-  /* Agent colors */
-  --sparky: #f59e0b;
-  --patch:  #14b8a6;
-  --sage:   #8b5cf6;
-  --nova:   #ec4899;
-  --lyra:   #60a5fa;
-  --scout:  #22c55e;
-
-  /* AMD */
-  --amd-red: #ed1c24;
-
-  /* Semantic */
-  --success: #22c55e;
+  /* Common Tokens */
+  --font-display: var(--font-bebas-neue), system-ui;
+  --font-ui:      var(--font-syne), system-ui;
+  --font-mono:    var(--font-jetbrains-mono), monospace;
+  
+  /* Light Mode - Crisp & Professional */
+  --background: #ffffff;
+  --surface: #f8fafc;
+  --surface-hover: #f1f5f9;
+  --panel: rgba(255, 255, 255, 0.8);
+  --void: #f1f5f9;
+  --border: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-code: #059669;
+  
+  --brand: #4f46e5;
+  --success: #10b981;
   --warning: #f59e0b;
-  --danger:  #ef4444;
-  --info:    #60a5fa;
-
-  /* Type scale */
-  --fs-hero:    96px;
-  --fs-display: 56px;
-  --fs-h1:      40px;
-  --fs-h2:      28px;
-  --fs-h3:      20px;
-  --fs-body:    15px;
-  --fs-ui:      13px;
-  --fs-label:   11px;
-  --fs-code:    13px;
-
-  /* Line heights */
-  --lh-tight: 1.0;
-  --lh-snug:  1.2;
-  --lh-body:  1.5;
-
-  /* Letter spacing */
-  --ls-display: 0.02em;
-  --ls-label:   0.12em;
-  --ls-mono:    0;
-
-  /* Radii */
-  --radius-sm:   6px;
-  --radius-md:   10px;
-  --radius-lg:   16px;
-  --radius-xl:   20px;
-  --radius-pill: 999px;
-
-  /* Shadows */
-  --shadow-lift:  0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7);
-
-  /* Layout */
-  --topbar-h:     64px;
-  --crew-w:       240px;
-  --slideover-w:  380px;
+  --danger: #ef4444;
+  --info: #2563eb;
+  --amd-red: #ed1c24;
+  
+  /* Agent Colors */
+  --agent-sparky: #f59e0b;
+  --agent-patch: #14b8a6;
+  --agent-sage: #8b5cf6;
+  --agent-nova: #d946ef;
+  --agent-lyra: #3b82f6;
+  --agent-scout: #10b981;
+  
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(226, 232, 240, 0.5);
+  --glass-blur: 24px;
+  
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
 
   /* Motion */
-  --ease-snap:  cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-pulse: cubic-bezier(0.4, 0, 0.6, 1);
-  --dur-fast:   120ms;
-  --dur-base:   220ms;
-  --dur-slow:   400ms;
+  --ease-snap:  cubic-bezier(0.2, 1, 0.3, 1);
+  --dur-fast:   150ms;
+  --dur-base:   300ms;
+  --dur-slow:   500ms;
+}
+
+[data-theme='dark'], .dark {
+  /* Dark Mode - Premium Midnight Blue */
+  --background: #0b0e14;
+  --surface: #141923;
+  --surface-hover: #1c2331;
+  --panel: rgba(13, 17, 23, 0.8);
+  --void: #0d1117;
+  --border: #21262d;
+  --border-hover: #30363d;
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --text-muted: #484f58;
+  --text-code: #7ee787;
+  
+  --brand: #58a6ff;
+  --success: #3fb950;
+  --warning: #d29922;
+  --danger: #f85149;
+  
+  /* Agent Colors */
+  --agent-sparky: #f0883e;
+  --agent-patch: #3fb950;
+  --agent-sage: #bc8cff;
+  --agent-nova: #ff7b72;
+  --agent-lyra: #58a6ff;
+  --agent-scout: #3fb950;
+  
+  --glass-bg: rgba(13, 17, 23, 0.7);
+  --glass-border: rgba(240, 246, 252, 0.1);
 }
 
 /* =============================================================
-   Keyframes
-   ============================================================= */
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(0.85); }
-}
-
-@keyframes borderPulse {
-  0%, 100% { border-color: var(--border); }
-  50%       { border-color: var(--agent); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-3px); }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%       { transform: translateY(-4px) scale(1.04); }
-}
-
-@keyframes blink {
-  0%, 49%   { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
-
-@keyframes slidedown {
-  from { transform: translateY(-20px); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
-}
-
-@keyframes slideleft {
-  from { transform: translateX(40px); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
-
-@keyframes slidein {
-  from { transform: translateX(-10px); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
-}
-
-@keyframes glitch {
-  0% { transform: translate(0); }
-  20% { transform: translate(-2px, 2px); }
-  40% { transform: translate(-2px, -2px); }
-  60% { transform: translate(2px, 2px); }
-  80% { transform: translate(2px, -2px); }
-  100% { transform: translate(0); }
-}
-
-.glitch { animation: glitch 0.3s var(--ease-snap); }
-
-/* =============================================================
-   Base
+   Base & Reset
    ============================================================= */
 
 html, body {
@@ -149,58 +95,92 @@ html, body {
   background: var(--void);
   color: var(--text-primary);
   font-family: var(--font-ui), system-ui, sans-serif;
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
 }
 
-button { font-family: inherit; }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 0% 0%, rgba(88, 166, 255, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 100% 100%, rgba(255, 123, 114, 0.05) 0%, transparent 50%);
+  z-index: -1;
+  pointer-events: none;
+}
 
 /* =============================================================
-   Sprites
+   Modern Utilities
    ============================================================= */
 
-.sprite-idle img  { animation: float  3.2s ease-in-out infinite; }
-.sprite-working img { animation: bounce 0.8s ease-in-out infinite; }
+.bg-glass {
+  background: var(--panel);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border);
+}
 
-/* =============================================================
-   Agent card
-   ============================================================= */
+.bg-grid {
+  background-size: 30px 30px;
+  background-image: 
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black, transparent 80%);
+}
 
-.agent-card.is-working { animation: borderPulse 1.6s ease-in-out infinite; }
+.text-gradient {
+  background: linear-gradient(135deg, var(--brand), var(--agent-nova));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-/* =============================================================
-   Tabs
-   ============================================================= */
+.card-shadow {
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.1);
+}
+[data-theme='dark'] .card-shadow {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+}
 
-.tabs button {
+.animate-entrance {
+  animation: entrance var(--dur-base) var(--ease-snap) backwards;
+}
+
+@keyframes entrance {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px currentColor; opacity: 0.5; }
+  50% { box-shadow: 0 0 20px currentColor; opacity: 1; }
+  100% { box-shadow: 0 0 5px currentColor; opacity: 0.5; }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
   background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 14px 16px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 120ms;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand);
+  background-clip: content-box;
 }
 
-.tabs button.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--text-primary);
-}
+.scrollbar-thin::-webkit-scrollbar { width: 6px; }
 
-/* =============================================================
-   Scrollbars
-   ============================================================= */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-::-webkit-scrollbar          { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb    { background: rgba(255,255,255,0.06); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to   { opacity: 1; transform: translateX(0); }
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }

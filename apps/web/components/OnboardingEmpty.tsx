@@ -1,6 +1,7 @@
 'use client'
-
+import { motion } from 'framer-motion'
 import { MascotSprite } from './mascots/MascotSprite'
+import { Rocket, Shield, Zap } from 'lucide-react'
 
 interface Props {
   onAddProject: () => void
@@ -8,67 +9,78 @@ interface Props {
 
 export function OnboardingEmpty({ onAddProject }: Props) {
   return (
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 24,
-      padding: 48,
-    }}>
-      <MascotSprite name="SPARKY" state="idle" w={120} h={180} />
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', letterSpacing: '0.04em', marginBottom: 10 }}>
-          NO PROJECTS YET
-        </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 380 }}>
-          Connect a GitHub repo and the crew will scan it, map its structure,
-          and be ready to decompose your plans into trackable tickets.
-        </div>
+    <div className="flex-1 flex flex-col items-center justify-center p-12 relative overflow-hidden bg-grid">
+      {/* Background Decorative Glows */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--brand)]/5 rounded-full blur-[120px] animate-pulse" />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', width: '100%', maxWidth: 340 }}>
-        <button
-          onClick={onAddProject}
-          style={{
-            width: '100%',
-            fontFamily: 'var(--font-display)',
-            fontSize: 15,
-            letterSpacing: '0.06em',
-            background: '#f59e0b',
-            color: '#0a0a14',
-            border: 'none',
-            padding: '14px 24px',
-            borderRadius: 8,
-            cursor: 'pointer',
-            boxShadow: '0 0 28px rgba(245,158,11,0.4)',
-          }}
-        >
-          + CONNECT A REPO
-        </button>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6, textAlign: 'center' }}>
-          We&#39;ll create a <code style={{ color: 'var(--text-secondary)' }}>.repomind/</code> folder in your repo
-          to store tickets, architecture maps, and release notes — all in Git.
+
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="relative z-10 text-center max-w-2xl"
+      >
+        <div className="mb-10 flex justify-center">
+          <motion.div
+            animate={{ y: [0, -12, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-[var(--brand)] blur-3xl opacity-20 scale-150" />
+            <MascotSprite name="SPARKY" state="idle" w={160} h={240} />
+          </motion.div>
         </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, width: '100%', maxWidth: 480, marginTop: 8 }}>
-        {[
-          { agent: 'SCOUT', color: '#22c55e', desc: 'Scans repo structure' },
-          { agent: 'SPARKY', color: '#f59e0b', desc: 'Decomposes your plans' },
-          { agent: 'PATCH', color: '#14b8a6', desc: 'Watches commits' },
-        ].map(({ agent, color, desc }) => (
-          <div key={agent} style={{
-            background: 'var(--panel)',
-            border: '1px solid var(--border)',
-            borderRadius: 10,
-            padding: '14px 12px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, color, letterSpacing: '0.08em', marginBottom: 4 }}>{agent}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{desc}</div>
+
+        <h1 className="font-[var(--font-display)] text-7xl tracking-tighter text-[var(--text-primary)] mb-4 drop-shadow-2xl">
+          REPO<span className="text-gradient">MIND</span>
+        </h1>
+        
+        <p className="font-[var(--font-ui)] text-xl text-[var(--text-secondary)] mb-10 leading-relaxed font-medium">
+          The ultimate AI workforce for your repositories. <br />
+          Map, architect, and deploy with <span className="text-[var(--brand)] font-bold">AMD MI300X</span> precision.
+        </p>
+
+        <div className="flex flex-col items-center gap-6">
+          <motion.button
+            whileHover={{ scale: 1.05, boxShadow: '0 0 40px rgba(88, 166, 255, 0.4)' }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onAddProject}
+            className="group relative px-14 py-5 bg-[var(--brand)] text-white rounded-[var(--radius-xl)] font-[var(--font-display)] text-2xl tracking-[0.2em] shadow-2xl transition-all overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <span className="relative z-10 flex items-center gap-4">
+              <Rocket size={24} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              CONNECT YOUR REPO
+            </span>
+          </motion.button>
+          
+          <div className="font-[var(--font-mono)] text-[10px] text-[var(--text-secondary)] uppercase tracking-[0.3em] font-black flex items-center gap-4">
+            <div className="w-12 h-[1px] bg-[var(--border-hover)]" />
+            NO CREDIT CARD REQUIRED
+            <div className="w-12 h-[1px] bg-[var(--border-hover)]" />
           </div>
-        ))}
-      </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6 mt-20">
+          {[
+            { agent: 'SCOUT', icon: <Shield size={16} />, color: 'var(--agent-scout)', desc: 'Architectural Analysis' },
+            { agent: 'SPARKY', icon: <Zap size={16} />, color: 'var(--agent-sparky)', desc: 'Plan Decomposition' },
+            { agent: 'PATCH', icon: <Rocket size={16} />, color: 'var(--agent-patch)', desc: 'Autonomous Fixes' },
+          ].map(({ agent, icon, color, desc }, i) => (
+            <motion.div
+              key={agent}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 + i * 0.1 }}
+              className="p-6 bg-glass border border-[var(--border-hover)]/30 rounded-2xl flex flex-col items-center text-center group hover:border-[var(--brand)]/40 transition-all cursor-default shadow-lg"
+            >
+              <div className="mb-3 p-2 rounded-lg transition-transform duration-500 group-hover:scale-110" style={{ color }}>{icon}</div>
+              <div className="font-[var(--font-display)] text-xl tracking-widest mb-1" style={{ color }}>{agent}</div>
+              <div className="font-[var(--font-mono)] text-[9px] text-[var(--text-primary)] font-black uppercase tracking-widest opacity-80">{desc}</div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   )
 }

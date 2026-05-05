@@ -1,6 +1,8 @@
-'use client'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { MascotSprite } from '@/components/mascots/MascotSprite'
 import type { AgentName } from '@/lib/types'
+import { Settings as SettingsIcon } from 'lucide-react'
 
 export type SectionId = 'kanban' | 'suggestions' | 'architecture' | 'releases' | 'chat' | 'scout' | 'settings'
 
@@ -19,72 +21,88 @@ interface Props {
 }
 
 const BASE_ITEMS: SidebarItem[] = [
-  { id: 'kanban',       label: 'KANBAN',       agent: 'SPARKY', agentColor: '#f59e0b' },
-  { id: 'suggestions',  label: 'SUGGESTIONS',  agent: 'PATCH',  agentColor: '#14b8a6' },
-  { id: 'architecture', label: 'ARCHITECTURE', agent: 'SAGE',   agentColor: '#8b5cf6' },
-  { id: 'releases',     label: 'RELEASES',     agent: 'NOVA',   agentColor: '#ec4899' },
-  { id: 'chat',         label: 'Q&A',          agent: 'LYRA',   agentColor: '#60a5fa' },
-  { id: 'scout',        label: 'SECURITY',     agent: 'SCOUT',  agentColor: '#22c55e' },
+  { id: 'kanban',       label: 'KANBAN',       agent: 'SPARKY', agentColor: 'var(--agent-sparky)' },
+  { id: 'suggestions',  label: 'SUGGESTIONS',  agent: 'PATCH',  agentColor: 'var(--agent-patch)' },
+  { id: 'architecture', label: 'ARCHITECTURE', agent: 'SAGE',   agentColor: 'var(--agent-sage)' },
+  { id: 'releases',     label: 'RELEASES',     agent: 'NOVA',   agentColor: 'var(--agent-nova)' },
+  { id: 'chat',         label: 'Q&A',          agent: 'LYRA',   agentColor: 'var(--agent-lyra)' },
+  { id: 'scout',        label: 'SECURITY',     agent: 'SCOUT',  agentColor: 'var(--agent-scout)' },
 ]
-
 export function Sidebar({ active, onSelect, suggestionCount = 0, agentNames = {} }: Props) {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   const items = BASE_ITEMS.map(i => ({
     ...i,
     badge: i.id === 'suggestions' && suggestionCount > 0 ? suggestionCount : undefined,
   }))
 
   return (
-    <div style={{
-      width: 200, borderRight: '1px solid var(--border)', background: 'var(--panel)',
-      display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100%',
-    }}>
-      <div style={{ flex: 1, paddingTop: 8 }}>
+    <div className={`transition-all duration-500 border-r border-[var(--border)] bg-glass/40 flex flex-col flex-none h-full relative ${isCollapsed ? 'w-20' : 'w-48'} hidden md:flex`}>
+      <button 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -right-3 top-20 w-6 h-6 bg-[var(--surface)] border border-[var(--border)] rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--brand)] z-50 shadow-xl transition-all hover:scale-110 active:scale-95"
+      >
+        <div className={`transition-transform duration-500 ${isCollapsed ? 'rotate-180' : ''}`}>
+          <SettingsIcon size={12} />
+        </div>
+      </button>
+
+      {/* Sidebar Edge Glow */}
+      <div className="absolute right-0 top-0 w-[1px] h-full bg-gradient-to-b from-transparent via-[var(--brand)]/20 to-transparent" />
+
+      <div className="flex-1 pt-4 overflow-y-auto scrollbar-hide space-y-0.5 px-2">
         {items.map(item => {
           const isActive = active === item.id
           const displayLabel = agentNames[item.agent] ?? item.label
           return (
-            <button
+            <motion.button
               key={item.id}
+              whileHover={{ x: 2, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => onSelect(item.id)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 14px', background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
-                border: 'none', borderLeft: `2px solid ${isActive ? item.agentColor : 'transparent'}`,
-                cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-              }}
+              className={`
+                w-full flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer text-left transition-all relative group
+                ${isActive ? 'bg-[var(--surface)] shadow-lg ring-1 ring-[var(--border-hover)]' : 'hover:bg-[var(--surface)]/30 opacity-60 hover:opacity-100'}
+              `}
             >
-              <MascotSprite name={item.agent} state={isActive ? 'working' : 'idle'} w={24} h={36} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: isActive ? item.agentColor : 'var(--text-muted)', letterSpacing: '0.06em' }}>
+              {isActive && (
+                <motion.div 
+                  layoutId="sidebar-indicator"
+                  className="absolute -left-1 w-2 h-1/2 rounded-full blur-[2px]"
+                  style={{ background: item.agentColor, boxShadow: `0 0 12px ${item.agentColor}` }}
+                />
+              )}
+              
+              <div className="flex-none transition-transform duration-500 group-hover:scale-110">
+                <MascotSprite name={item.agent} state={isActive ? 'working' : 'idle'} w={26} h={39} />
+              </div>
+              
+              <div className={`flex-1 min-w-0 transition-all duration-500 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
+                <div 
+                  className="font-[var(--font-display)] text-xs tracking-widest font-black transition-colors"
+                  style={{ color: isActive ? item.agentColor : 'var(--text-muted)' }}
+                >
                   {item.agent}
                 </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', marginTop: 1 }}>
+                <div className={`
+                  font-[var(--font-mono)] text-[9px] truncate mt-1 font-bold uppercase tracking-tighter transition-all
+                  ${isActive ? 'text-[var(--text-primary)] opacity-100' : 'text-[var(--text-muted)] opacity-40'}
+                `}>
                   {displayLabel}
                 </div>
               </div>
+              
               {item.badge && (
-                <span style={{ background: item.agentColor, color: '#fff', borderRadius: 999, padding: '1px 5px', fontSize: 9, fontFamily: 'var(--font-mono)' }}>
-                  {item.badge}
-                </span>
+                <div className="absolute top-2 right-2">
+                   <div className="bg-[var(--agent-patch)] text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center text-[8px] font-black font-[var(--font-mono)] shadow-lg animate-pulse ring-4 ring-[var(--agent-patch)]/20">
+                    {item.badge}
+                  </div>
+                </div>
               )}
-            </button>
+            </motion.button>
           )
         })}
       </div>
-
-      <button
-        onClick={() => onSelect('settings')}
-        style={{
-          width: '100%', padding: '12px 14px', background: active === 'settings' ? 'rgba(255,255,255,0.05)' : 'transparent',
-          border: 'none', borderTop: '1px solid var(--border)', borderLeft: `2px solid ${active === 'settings' ? '#60a5fa' : 'transparent'}`,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-        }}
-      >
-        <span style={{ fontSize: 14 }}>&#9881;</span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: active === 'settings' ? 'var(--text-primary)' : 'var(--text-muted)', letterSpacing: '0.06em' }}>
-          SETTINGS
-        </span>
-      </button>
     </div>
   )
 }

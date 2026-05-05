@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { AgentState, AgentName, Ticket, ActivityEvent, AmdMetrics } from '@/lib/types'
 import { INITIAL_AGENTS } from '@/lib/fake-data'
 import { useToast } from '@/components/Toast'
@@ -191,7 +192,6 @@ export default function App() {
 
   const onDeploy = async (text: string) => {
     if (!selectedProject) {
-      // No project: simulate
       setPlanWorking(true)
       setAgent('SPARKY', 'working')
       setTimeout(() => {
@@ -225,7 +225,6 @@ export default function App() {
       setAgent('SPARKY', 'done')
       setTimeout(() => setAgent('SPARKY', 'idle'), 2000)
 
-      // Reload tickets
       await loadTickets(selectedProject.id)
     } catch (err: any) {
       setFeed(f => [{ color: '#ef4444', text: `SPARKY error: ${err.message}`, agent: 'SPARKY', detail: `error: ${err.message}`, ago: 'now' }, ...f])
@@ -240,7 +239,6 @@ export default function App() {
 
   const onTicketStatusChange = async (ticketId: string, newStatus: string, ticketPath?: string) => {
     if (!selectedProject) return
-    // Optimistic update — move card immediately
     setTickets(ts => ts.map(t => t.id === ticketId ? { ...t, status: newStatus as Ticket['status'] } : t))
     try {
       await fetch(`/api/projects/${selectedProject.id}/repomind/tickets/${ticketId}`, {
@@ -251,7 +249,6 @@ export default function App() {
       toast('Ticket moved', 'success')
     } catch (err) {
       console.error('Failed to update ticket:', err)
-      // Revert on failure
       loadTickets(selectedProject.id)
     }
   }
@@ -276,14 +273,17 @@ export default function App() {
 
   if (status === 'loading' || status === 'unauthenticated') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-muted)', background: 'var(--void)' }}>
-        {status === 'loading' ? 'authenticating…' : 'redirecting…'}
+      <div className="flex flex-col items-center justify-center h-screen bg-[var(--void)] text-[var(--text-muted)] font-[var(--font-mono)] gap-4">
+        <div className="w-12 h-12 border-4 border-[var(--agent-sparky)]/20 border-t-[var(--agent-sparky)] rounded-full animate-spin" />
+        <span className="text-xs uppercase tracking-[0.2em] animate-pulse">
+          {status === 'loading' ? 'Authenticating System...' : 'Redirecting...'}
+        </span>
       </div>
     )
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div className="flex flex-col h-screen overflow-hidden bg-[var(--void)] text-[var(--text-primary)]">
       <Topbar
         gpu={gpuRounded}
         onAmdClick={() => setAmdOpen(true)}
@@ -295,103 +295,92 @@ export default function App() {
         onSync={() => selectedProject && loadTickets(selectedProject.id)}
       />
 
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        <CrewPanel
-          agents={agents}
-          amdMetrics={{ ...metrics, gpu: gpuRounded, mem: Math.round(metrics.mem) }}
-          activityFeed={feed}
-          onAgentClick={n => setAgentModal(n)}
-          onAmdClick={() => setAmdOpen(true)}
+      <div className="flex-1 flex min-h-0">
+        <Sidebar
+          active={section}
+          onSelect={(id) => {
+            if (id === 'settings') { setProjectSettingsOpen(true); return }
+            setSection(id)
+          }}
+          suggestionCount={suggestionCount}
+          agentNames={agentNames}
         />
 
-        <div style={{ flex: 1, display: 'flex', minHeight: 0, minWidth: 0 }}>
-          <Sidebar
-            active={section}
-            onSelect={(id) => {
-              if (id === 'settings') { setProjectSettingsOpen(true); return }
-              setSection(id)
-            }}
-            suggestionCount={suggestionCount}
-            agentNames={agentNames}
+        <main className="flex-1 flex flex-col min-w-0 bg-[var(--void)] border-r border-[var(--border)]">
+          {!selectedProject && projects.length === 0 ? (
+            <OnboardingEmpty onAddProject={() => setNewProjectOpen(true)} />
+          ) : (
+            <>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={section + (selectedProject?.id || '')}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3, ease: [0.2, 1, 0.3, 1] }}
+                  className="flex-1 flex flex-col min-h-0"
+                >
+                  {SECTION_AGENTS[section] && (
+                    <AgentWelcomeBanner
+                      agent={SECTION_AGENTS[section]!}
+                      context={welcomeContext}
+                      displayName={agentNames[SECTION_AGENTS[section]!]}
+                    />
+                  )}
+
+                  <div className="flex items-center justify-end border-b border-[var(--border)] bg-[var(--panel)]/50 backdrop-blur-sm flex-shrink-0 px-4 h-11 gap-3">
+                    <button
+                      onClick={() => setAgentCustomizeOpen(true)}
+                      className="font-[var(--font-ui)] font-bold text-[10px] uppercase tracking-wider bg-[var(--surface)] hover:bg-[var(--hover)] text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      AGENTS
+                    </button>
+                    <button
+                      onClick={() => setPlanOpen(true)}
+                      className="font-[var(--font-ui)] font-bold text-[10px] uppercase tracking-wider bg-[var(--surface)] hover:border-[var(--agent-sparky)] text-[var(--text-primary)] border border-[var(--border-hover)] px-4 py-1.5 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-95"
+                    >
+                      + New Plan
+                    </button>
+                  </div>
+
+                  <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
+
+                  <div className="flex-1 min-h-0 p-4">
+                    {section === 'kanban' && (
+                      <ErrorBoundary>
+                        <KanbanBoard
+                          tickets={loadingTickets && tickets.length === 0 ? [] : tickets}
+                          flashId={flashId}
+                          onStatusChange={onTicketStatusChange}
+                          onTicketClick={t => setTicketDetail(t)}
+                          projectId={selectedProject?.id ?? null}
+                          onTicketCreated={() => selectedProject && loadTickets(selectedProject.id)}
+                          loading={loadingTickets}
+                        />
+                      </ErrorBoundary>
+                    )}
+                    {section === 'suggestions' && <ErrorBoundary><SuggestionsPanel projectId={selectedProject?.id ?? null} repoFull={selectedProject?.repo_full ?? null} onApproved={() => loadTickets(selectedProject!.id)} /></ErrorBoundary>}
+                    {section === 'architecture' && <ErrorBoundary><ArchitecturePanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
+                    {section === 'releases' && <ErrorBoundary><ReleasesPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
+                    {section === 'chat' && <ErrorBoundary><ChatPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
+                    {section === 'scout' && selectedProject && (
+                      <ScoutPanel projectId={selectedProject.id} />
+                    )}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </>
+          )}
+        </main>
+
+        <div className="hidden xl:flex">
+          <CrewPanel
+            agents={agents}
+            amdMetrics={{ ...metrics, gpu: gpuRounded, mem: Math.round(metrics.mem) }}
+            activityFeed={feed}
+            onAgentClick={n => setAgentModal(n)}
+            onAmdClick={() => setAmdOpen(true)}
           />
-
-          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            {!selectedProject && projects.length === 0 ? (
-              <OnboardingEmpty onAddProject={() => setNewProjectOpen(true)} />
-            ) : (
-              <>
-                {SECTION_AGENTS[section] && (
-                  <AgentWelcomeBanner
-                    agent={SECTION_AGENTS[section]!}
-                    context={welcomeContext}
-                    displayName={agentNames[SECTION_AGENTS[section]!]}
-                  />
-                )}
-
-                {/* New Plan button bar */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', borderBottom: '1px solid var(--border)', background: 'var(--panel)', flexShrink: 0, padding: '0 16px', height: 44 }}>
-                  <button
-                    onClick={() => setAgentCustomizeOpen(true)}
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontWeight: 600,
-                      fontSize: 12,
-                      background: 'var(--surface)',
-                      color: 'var(--text-muted)',
-                      border: '1px solid var(--border)',
-                      padding: '6px 12px',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      marginRight: 8,
-                    }}
-                  >
-                    AGENTS
-                  </button>
-                  <button
-                    onClick={() => setPlanOpen(true)}
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontWeight: 600,
-                      fontSize: 12,
-                      background: 'var(--surface)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border-hover)',
-                      padding: '6px 12px',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    + New Plan
-                  </button>
-                </div>
-
-                <PlanInput open={planOpen} onClose={() => setPlanOpen(false)} onDeploy={onDeploy} working={planWorking} hasProject={!!selectedProject} />
-
-                <div key={section} className="slideleft" style={{ flex: 1, minHeight: 0 }}>
-                  {section === 'kanban' && (
-                    <ErrorBoundary>
-                      <KanbanBoard
-                        tickets={loadingTickets && tickets.length === 0 ? [] : tickets}
-                        flashId={flashId}
-                        onStatusChange={onTicketStatusChange}
-                        onTicketClick={t => setTicketDetail(t)}
-                        projectId={selectedProject?.id ?? null}
-                        onTicketCreated={() => selectedProject && loadTickets(selectedProject.id)}
-                        loading={loadingTickets}
-                      />
-                    </ErrorBoundary>
-                  )}
-                  {section === 'suggestions' && <ErrorBoundary><SuggestionsPanel projectId={selectedProject?.id ?? null} repoFull={selectedProject?.repo_full ?? null} onApproved={() => loadTickets(selectedProject!.id)} /></ErrorBoundary>}
-                  {section === 'architecture' && <ErrorBoundary><ArchitecturePanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
-                  {section === 'releases' && <ErrorBoundary><ReleasesPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
-                  {section === 'chat' && <ErrorBoundary><ChatPanel projectId={selectedProject?.id ?? null} /></ErrorBoundary>}
-                  {section === 'scout' && selectedProject && (
-                    <ScoutPanel projectId={selectedProject.id} />
-                  )}
-                </div>
-              </>
-            )}
-          </main>
         </div>
       </div>
 

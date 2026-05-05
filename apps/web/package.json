@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase start && next dev",
+    "dev": "next dev",
     "supabase:start": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase start",
     "supabase:stop": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase stop",
     "supabase:reset": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock npx supabase db reset",
@@ -24,6 +24,7 @@
     "mermaid": "^11.14.0",
     "next": "^15",
     "next-auth": "^4.24.13",
+    "next-themes": "^0.4.6",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.1.0",

@@ -1,127 +1,204 @@
 'use client'
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { MascotSprite } from '@/components/mascots/MascotSprite'
+import { Github, Rocket, LogIn, UserPlus, Sparkles, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
+  const [handle, setHandle] = useState('')
 
   const handleLogin = async () => {
     setLoading(true)
-    await signIn('github', { callbackUrl: '/' })
+    try {
+      await signIn('github', { callbackUrl: '/' })
+    } catch (err) {
+      setLoading(false)
+    }
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 32,
-      padding: 24,
-    }}>
-      {/* Scanline overlay */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }} />
+    <div className="min-h-screen bg-[var(--void)] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Background FX */}
+      <div className="absolute inset-0 bg-grid opacity-10 pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-[var(--brand)]/5 to-transparent pointer-events-none" />
+      
+      {/* Floating Orbs */}
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.1, 0.2, 0.1],
+          x: [0, 50, 0],
+          y: [0, 30, 0]
+        }}
+        transition={{ duration: 10, repeat: Infinity }}
+        className="absolute -top-20 -left-20 w-96 h-96 bg-[var(--brand)] rounded-full blur-[120px] pointer-events-none"
+      />
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.1, 1],
+          opacity: [0.05, 0.15, 0.05],
+          x: [0, -40, 0],
+          y: [0, -20, 0]
+        }}
+        transition={{ duration: 8, repeat: Infinity, delay: 1 }}
+        className="absolute -bottom-20 -right-20 w-80 h-80 bg-[var(--agent-nova)] rounded-full blur-[100px] pointer-events-none"
+      />
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, maxWidth: 480 }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <svg width="28" height="40" viewBox="0 0 32 48" fill="none">
-            <path d="M16 4 L26 4 L20 22 L30 22 L14 48 L20 28 L10 28 Z" fill="#f59e0b" />
-          </svg>
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 40,
-            letterSpacing: '0.06em',
-            color: 'var(--text-primary)',
-          }}>REPOMIND</div>
-        </div>
-
-        {/* Mascot */}
-        <MascotSprite name="SPARKY" state="idle" w={160} h={240} />
-
-        {/* Card */}
-        <div style={{
-          background: 'var(--panel)',
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          padding: '32px 40px',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 20,
-          boxShadow: '0 0 60px rgba(245,158,11,0.08)',
-        }}>
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 22,
-            letterSpacing: '0.04em',
-            color: 'var(--text-primary)',
-            textAlign: 'center',
-          }}>
-            AUTHENTICATE WITH GITHUB
+      <div className="relative z-10 w-full max-w-5xl flex flex-col items-center gap-12">
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="flex items-center gap-4">
+             <div className="w-12 h-12 bg-gradient-to-br from-[var(--brand)] to-[var(--agent-nova)] rounded-2xl flex items-center justify-center shadow-2xl">
+               <div className="w-6 h-6 bg-[var(--surface)] rounded-full flex items-center justify-center border border-white/20">
+                  <div className="w-3 h-3 bg-[var(--brand)] rounded-full animate-pulse shadow-[0_0_10px_var(--brand)]"></div>
+               </div>
+             </div>
+             <h1 className="font-[var(--font-display)] text-5xl tracking-[0.2em] text-[var(--text-primary)]">REPOMIND</h1>
           </div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            color: 'var(--text-muted)',
-            letterSpacing: '0.06em',
-            textAlign: 'center',
-            lineHeight: 1.6,
-          }}>
-            SPARKY needs repo access to decompose<br />your plans into trackable tickets.
-          </div>
+          <p className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.4em] text-[var(--text-muted)] opacity-60 text-center">Architecting Repository Intelligence</p>
+        </motion.div>
 
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            style={{
-              width: '100%',
-              fontFamily: 'var(--font-display)',
-              fontSize: 15,
-              letterSpacing: '0.08em',
-              background: loading ? 'var(--surface)' : '#f59e0b',
-              color: loading ? 'var(--text-muted)' : '#0a0a14',
-              border: 'none',
-              padding: '14px 24px',
-              borderRadius: 8,
-              cursor: loading ? 'default' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              transition: 'opacity 0.2s',
-              boxShadow: loading ? 'none' : '0 0 24px rgba(245,158,11,0.35)',
-            }}
+        {/* Dual Portal Container */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+          {/* Sign Up Portal */}
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className={`
+              relative group p-8 rounded-[var(--radius-xl)] bg-glass border border-[var(--border)]
+              transition-all duration-500 hover:border-[var(--brand)]/40 hover:shadow-[0_0_50px_rgba(88,166,255,0.1)]
+              flex flex-col gap-8
+            `}
           >
-            {!loading && (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
-              </svg>
-            )}
-            {loading ? 'CONNECTING...' : 'SIGN IN WITH GITHUB'}
-          </button>
+            <div className="flex justify-between items-start">
+               <div>
+                 <h2 className="font-[var(--font-display)] text-3xl tracking-wider text-[var(--text-primary)] mb-2">INITIALIZE</h2>
+                 <p className="font-[var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Connect New Identity</p>
+               </div>
+               <div className="w-12 h-12 rounded-full bg-[var(--brand)]/10 flex items-center justify-center text-[var(--brand)] shadow-inner">
+                 <UserPlus size={22} />
+               </div>
+            </div>
 
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            color: 'var(--text-muted)',
-            letterSpacing: '0.04em',
-            opacity: 0.6,
-          }}>
-            Requests read:user, user:email, repo scopes
-          </div>
+            <div className="space-y-4">
+               <div className="space-y-2">
+                 <label className="font-[var(--font-mono)] text-[9px] uppercase tracking-[0.2em] text-[var(--text-muted)] ml-1">Desired System Handle</label>
+                 <div className="relative">
+                   <input 
+                     type="text" 
+                     placeholder="e.g. shaffan_01"
+                     value={handle}
+                     onChange={(e) => setHandle(e.target.value)}
+                     className="w-full bg-[var(--void)]/50 border border-[var(--border)] rounded-xl px-4 py-3 font-[var(--font-mono)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand)]/10 transition-all placeholder:opacity-30"
+                   />
+                   <Sparkles size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--brand)] opacity-40" />
+                 </div>
+               </div>
+               <p className="font-[var(--font-mono)] text-[8px] text-[var(--text-muted)] opacity-60 leading-relaxed italic">
+                 * This ID will be linked to your authorized GitHub account during initialization.
+               </p>
+            </div>
+
+            <button 
+              onClick={handleLogin}
+              disabled={loading}
+              className="mt-auto group/btn relative w-full h-14 rounded-xl overflow-hidden shadow-2xl transition-all active:scale-95 disabled:opacity-50"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[var(--brand)] to-[var(--agent-lyra)] transition-transform duration-500 group-hover/btn:scale-105" />
+              <div className="relative h-full w-full flex items-center justify-center gap-3 text-[var(--void)] font-[var(--font-display)] text-xl tracking-widest uppercase">
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <Github size={20} />}
+                <span>{loading ? 'Processing...' : 'Authorize via GitHub'}</span>
+              </div>
+            </button>
+            
+            <div className="flex items-center gap-2 opacity-20 group-hover:opacity-40 transition-opacity">
+               <div className="h-[1px] flex-1 bg-[var(--border)]" />
+               <span className="font-[var(--font-mono)] text-[8px] uppercase tracking-widest">New Deployment</span>
+               <div className="h-[1px] flex-1 bg-[var(--border)]" />
+            </div>
+          </motion.div>
+
+          {/* Sign In Portal */}
+          <motion.div 
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className={`
+              relative group p-8 rounded-[var(--radius-xl)] bg-glass border border-[var(--border)]
+              transition-all duration-500 hover:border-[var(--agent-nova)]/40 hover:shadow-[0_0_50px_rgba(255,123,114,0.1)]
+              flex flex-col gap-8
+            `}
+          >
+            <div className="flex justify-between items-start">
+               <div>
+                 <h2 className="font-[var(--font-display)] text-3xl tracking-wider text-[var(--text-primary)] mb-2">RESUME</h2>
+                 <p className="font-[var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--text-muted)]">Open Existing Workspace</p>
+               </div>
+               <div className="w-12 h-12 rounded-full bg-[var(--agent-nova)]/10 flex items-center justify-center text-[var(--agent-nova)] shadow-inner">
+                 <LogIn size={22} />
+               </div>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center py-4">
+              <div className="relative group/mascot">
+                <div className="absolute inset-0 bg-[var(--agent-nova)]/20 blur-3xl rounded-full scale-150 opacity-0 group-hover/mascot:opacity-100 transition-opacity duration-1000" />
+                <div className="transition-transform duration-700 group-hover/mascot:scale-110 group-hover/mascot:-rotate-3">
+                  <MascotSprite name="SPARKY" state="idle" w={120} h={180} />
+                </div>
+              </div>
+            </div>
+
+            <button 
+              onClick={handleLogin}
+              disabled={loading}
+              className="group/btn relative w-full h-14 rounded-xl overflow-hidden shadow-2xl transition-all active:scale-95 disabled:opacity-50"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[var(--agent-nova)] to-[var(--danger)] transition-transform duration-500 group-hover/btn:scale-105" />
+              <div className="relative h-full w-full flex items-center justify-center gap-3 text-[var(--void)] font-[var(--font-display)] text-xl tracking-widest uppercase">
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <Rocket size={20} />}
+                <span>{loading ? 'Opening...' : 'Open Workspace'}</span>
+              </div>
+            </button>
+
+            <div className="flex items-center gap-2 opacity-20 group-hover:opacity-40 transition-opacity">
+               <div className="h-[1px] flex-1 bg-[var(--border)]" />
+               <span className="font-[var(--font-mono)] text-[8px] uppercase tracking-widest">Active Core</span>
+               <div className="h-[1px] flex-1 bg-[var(--border)]" />
+            </div>
+          </motion.div>
         </div>
+
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.4 }}
+          transition={{ delay: 1 }}
+          className="font-[var(--font-mono)] text-[9px] uppercase tracking-[0.2em] text-[var(--text-muted)] text-center max-w-md leading-loose px-4"
+        >
+          Secure authentication powered by GitHub OAuth. <br className="hidden md:block" />
+          System access requires read:user and repo scopes.
+        </motion.p>
       </div>
+
+      <AnimatePresence>
+        {loading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-[var(--void)]/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
+          >
+            <div className="w-16 h-16 border-4 border-[var(--brand)]/20 border-t-[var(--brand)] rounded-full animate-spin shadow-[0_0_20px_var(--brand)]" />
+            <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.4em] text-[var(--brand)] animate-pulse">Establishing Connection...</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

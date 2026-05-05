@@ -1,5 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  Search, Plus, Filter, Layout, CheckCircle2, 
+  Clock, RefreshCw, AlertCircle 
+} from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -26,45 +31,59 @@ interface Props {
 
 const COLS: TicketStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
 
-const COL_COLOR: Record<TicketStatus, string> = {
-  BACKLOG:     '#4e4b6a',
-  TODO:        '#60a5fa',
-  IN_PROGRESS: '#f59e0b',
-  IN_REVIEW:   '#8b5cf6',
-  DONE:        '#22c55e',
+const COL_STYLE: Record<TicketStatus, { color: string; bg: string; icon: any }> = {
+  BACKLOG:     { color: 'var(--text-muted)', bg: 'bg-[var(--text-muted)]/5', icon: Layout },
+  TODO:        { color: 'var(--agent-lyra)', bg: 'bg-[var(--agent-lyra)]/5', icon: Clock },
+  IN_PROGRESS: { color: 'var(--agent-sparky)', bg: 'bg-[var(--agent-sparky)]/5', icon: RefreshCw },
+  IN_REVIEW:   { color: 'var(--agent-sage)', bg: 'bg-[var(--agent-sage)]/5', icon: AlertCircle },
+  DONE:        { color: 'var(--agent-scout)', bg: 'bg-[var(--agent-scout)]/5', icon: CheckCircle2 },
 }
 
 function DroppableColumn({ col, tickets, flashId, onTicketClick, loading }: { col: TicketStatus; tickets: Ticket[]; flashId: string | null; onTicketClick?: (t: Ticket) => void; loading?: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: col })
+  const style = COL_STYLE[col]
+  const Icon = style.icon
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: `2px solid ${COL_COLOR[col]}` }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-primary)', letterSpacing: '0.06em' }}>{col.replace(/_/g, ' ')}</span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, background: 'var(--surface)', color: 'var(--text-secondary)', padding: '1px 7px', borderRadius: 999, border: '1px solid var(--border)' }}>{tickets.length}</span>
+    <div className="flex flex-col min-h-0 bg-glass rounded-[var(--radius-lg)] p-4 border border-[var(--border)] group">
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border)]">
+        <div className="flex items-center gap-2.5">
+          <div className={`p-1.5 rounded-lg ${style.bg}`} style={{ color: style.color }}>
+            <Icon size={16} />
+          </div>
+          <span className="font-[var(--font-display)] text-sm tracking-widest text-[var(--text-primary)]">{col.replace(/_/g, ' ')}</span>
+        </div>
+        <span className="font-[var(--font-mono)] text-[10px] bg-[var(--surface)] text-[var(--text-muted)] px-2 py-0.5 rounded-full border border-[var(--border)] shadow-sm">
+          {tickets.length}
+        </span>
       </div>
+
       <div
         ref={setNodeRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          paddingRight: 4,
-          borderRadius: 8,
-          minHeight: 60,
-          background: isOver ? `${COL_COLOR[col]}12` : 'transparent',
-          transition: 'background 120ms',
-        }}
+        className={`
+          flex-1 overflow-y-auto pr-1 space-y-1 min-h-[100px] transition-colors duration-300 rounded-[var(--radius-md)]
+          ${isOver ? 'bg-[var(--hover)]/30' : 'transparent'}
+        `}
       >
-        {tickets.map(t => (
-          <DraggableTicket key={t.id} ticket={t} flash={t.id === flashId} onClick={onTicketClick} />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {tickets.map(t => (
+            <DraggableTicket key={t.id} ticket={t} flash={t.id === flashId} onClick={onTicketClick} />
+          ))}
+        </AnimatePresence>
+
         {tickets.length === 0 && loading && (
-          <>
-            <div style={{ height: 64, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', marginBottom: 8, opacity: 0.5, animation: 'pulse 1.5s infinite' }} />
-            <div style={{ height: 64, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', marginBottom: 8, opacity: 0.5, animation: 'pulse 1.5s infinite' }} />
-          </>
+          <div className="space-y-3">
+            {[1, 2].map(i => (
+              <div key={i} className="h-24 rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border)] opacity-40 animate-pulse" />
+            ))}
+          </div>
         )}
+        
         {tickets.length === 0 && !loading && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', padding: 12, textAlign: 'center' }}>—</div>
+          <div className="flex flex-col items-center justify-center h-full opacity-20 py-8">
+            <Layout size={32} className="text-[var(--text-muted)] mb-2" />
+            <span className="font-[var(--font-mono)] text-[8px] tracking-[0.2em] uppercase">Empty</span>
+          </div>
         )}
       </div>
     </div>
@@ -76,17 +95,20 @@ function DraggableTicket({ ticket, flash, onClick }: { ticket: Ticket; flash: bo
     id: ticket.id,
     data: { ticket },
   })
+  
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
       onClick={() => { if (!isDragging) onClick?.(ticket) }}
+      className={`
+        touch-none transition-all
+        ${isDragging ? 'z-50 rotate-3 scale-105 pointer-events-none' : 'z-0'}
+      `}
       style={{
         transform: transform ? CSS.Translate.toString(transform) : undefined,
-        opacity: isDragging ? 0.35 : 1,
-        cursor: isDragging ? 'grabbing' : 'grab',
-        touchAction: 'none',
+        opacity: isDragging ? 0.4 : 1,
       }}
     >
       <TicketCard ticket={ticket} flash={flash} />
@@ -104,7 +126,7 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
   const [newDesc, setNewDesc] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   useEffect(() => {
     if (!newTicketOpen) return
@@ -123,10 +145,7 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle.trim(), description: newDesc.trim() || undefined }),
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error ?? `Request failed (${res.status})`)
-      }
+      if (!res.ok) throw new Error('Failed to create ticket')
       setNewTicketOpen(false)
       setNewTitle('')
       setNewDesc('')
@@ -143,9 +162,7 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
     if (filterComplexity !== 'ALL' && t.complexity !== filterComplexity) return false
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
-      const inTitle = t.title?.toLowerCase().includes(q)
-      const inDesc = (t as any).description?.toLowerCase().includes(q)
-      if (!inTitle && !inDesc) return false
+      if (!t.title?.toLowerCase().includes(q) && !(t as any).description?.toLowerCase().includes(q)) return false
     }
     return true
   })
@@ -173,132 +190,153 @@ export function KanbanBoard({ tickets, flashId, onStatusChange, onTicketClick, p
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTicket(null)}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* filter bar */}
-        <div style={{ padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--panel)' }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search tickets…"
-            style={{
-              background: 'var(--void)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '3px 8px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--text-primary)',
-              outline: 'none',
-              width: 140,
-            }}
-          />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>PRIORITY:</span>
-          {['ALL', 'HIGH', 'MED', 'LOW'].map(p => (
-            <button key={p} onClick={() => setFilterPriority(p)} style={{
-              fontSize: 10, padding: '3px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)',
-              background: filterPriority === p ? 'rgba(96,165,250,0.2)' : 'transparent',
-              color: filterPriority === p ? '#60a5fa' : 'var(--text-muted)',
-              border: `1px solid ${filterPriority === p ? 'rgba(96,165,250,0.4)' : 'var(--border)'}`,
-              cursor: 'pointer',
-            }}>{p}</button>
-          ))}
-          <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>SIZE:</span>
-          {['ALL', 'S', 'M', 'L', 'XL'].map(c => (
-            <button key={c} onClick={() => setFilterComplexity(c)} style={{
-              fontSize: 10, padding: '3px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)',
-              background: filterComplexity === c ? 'rgba(139,92,246,0.2)' : 'transparent',
-              color: filterComplexity === c ? '#8b5cf6' : 'var(--text-muted)',
-              border: `1px solid ${filterComplexity === c ? 'rgba(139,92,246,0.4)' : 'var(--border)'}`,
-              cursor: 'pointer',
-            }}>{c}</button>
-          ))}
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            {filtered.length} / {tickets.length} tickets
-          </span>
-          {projectId && (
-            <button
-              onClick={() => { setNewTicketOpen(true); setCreateError(null) }}
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 11,
-                letterSpacing: '0.06em',
-                background: 'rgba(96,165,250,0.15)',
-                color: '#60a5fa',
-                border: '1px solid rgba(96,165,250,0.3)',
-                padding: '4px 10px',
-                borderRadius: 4,
-                cursor: 'pointer',
-              }}
-            >
-              + New Ticket
-            </button>
-          )}
+      <div className="flex flex-col h-full bg-[var(--void)]">
+        {/* Filter Bar */}
+        <div className="h-14 px-6 flex items-center gap-4 bg-glass border-b border-[var(--border)] flex-none shadow-sm overflow-x-auto scrollbar-hide">
+          <div className="relative group">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--agent-sparky)] transition-colors" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Filter tasks..."
+              className="bg-[var(--surface)] border border-[var(--border)] focus:border-[var(--agent-sparky)] focus:ring-2 focus:ring-[var(--agent-sparky)]/10 rounded-full pl-9 pr-4 py-1.5 font-[var(--font-mono)] text-[10px] text-[var(--text-primary)] outline-none w-48 transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5 h-7 px-3 rounded-full bg-[var(--surface)] border border-[var(--border)]">
+            <Filter size={12} className="text-[var(--text-muted)]" />
+            <div className="flex gap-1">
+              {['ALL', 'HIGH', 'MED', 'LOW'].map(p => (
+                <button 
+                  key={p} 
+                  onClick={() => setFilterPriority(p)} 
+                  className={`
+                    px-2 py-0.5 rounded-full font-[var(--font-mono)] text-[8px] font-bold tracking-wider transition-all
+                    ${filterPriority === p ? 'bg-[var(--agent-lyra)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}
+                  `}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 h-7 px-3 rounded-full bg-[var(--surface)] border border-[var(--border)]">
+            <Layout size={12} className="text-[var(--text-muted)]" />
+            <div className="flex gap-1">
+              {['ALL', 'S', 'M', 'L', 'XL'].map(c => (
+                <button 
+                  key={c} 
+                  onClick={() => setFilterComplexity(c)} 
+                  className={`
+                    px-2 py-0.5 rounded-full font-[var(--font-mono)] text-[8px] font-bold tracking-wider transition-all
+                    ${filterComplexity === c ? 'bg-[var(--agent-sage)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}
+                  `}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ml-auto flex items-center gap-4">
+            <span className="font-[var(--font-mono)] text-[10px] text-[var(--text-muted)] font-bold tracking-wider opacity-60">
+              {filtered.length} / {tickets.length} TASKS
+            </span>
+            {projectId && (
+              <button
+                onClick={() => { setNewTicketOpen(true); setCreateError(null) }}
+                className="flex items-center gap-2 bg-[var(--agent-sparky)]/10 hover:bg-[var(--agent-sparky)]/20 text-[var(--agent-sparky)] border border-[var(--agent-sparky)]/30 px-4 py-1.5 rounded-full font-[var(--font-display)] text-xs tracking-widest transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Plus size={14} />
+                NEW TASK
+              </button>
+            )}
+          </div>
         </div>
-        {/* kanban columns */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, padding: 20, flex: 1, overflow: 'auto' }}>
+
+        {/* Kanban Board */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 p-6 overflow-auto">
           {COLS.map(col => (
             <DroppableColumn key={col} col={col} tickets={grouped[col]} flashId={flashId} onTicketClick={onTicketClick} loading={loading} />
           ))}
         </div>
       </div>
-      <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
-        {activeTicket ? <TicketCard ticket={activeTicket} flash={false} /> : null}
+
+      <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.2, 1, 0.3, 1)' }}>
+        {activeTicket ? (
+          <div className="rotate-3 scale-105 opacity-90 shadow-2xl">
+            <TicketCard ticket={activeTicket} flash={false} />
+          </div>
+        ) : null}
       </DragOverlay>
 
-      {newTicketOpen && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-          onClick={e => { if (e.target === e.currentTarget) { setNewTicketOpen(false) } }}
-        >
-          <div style={{ background: 'var(--panel)', border: '1px solid var(--border-hover)', borderRadius: 10, padding: 24, minWidth: 360, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.08em', color: 'var(--text-primary)' }}>NEW TICKET</span>
-            <input
-              placeholder="Title (required)"
-              value={newTitle}
-              onChange={e => setNewTitle(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreateTicket() }}
-              style={{ background: 'var(--void)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 12, width: '100%', outline: 'none', boxSizing: 'border-box' }}
-              autoFocus
+      {/* New Ticket Modal */}
+      <AnimatePresence>
+        {newTicketOpen && (
+          <div className="fixed inset-0 z-1000 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setNewTicketOpen(false)}
             />
-            <textarea
-              placeholder="Description (optional)"
-              value={newDesc}
-              onChange={e => setNewDesc(e.target.value)}
-              rows={3}
-              style={{ background: 'var(--void)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: 12, width: '100%', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
-            />
-            {createError && (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#f87171' }}>{createError}</span>
-            )}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setNewTicketOpen(false)}
-                style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.06em', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer' }}
-              >
-                CANCEL
-              </button>
-              <button
-                onClick={handleCreateTicket}
-                disabled={creating || !newTitle.trim()}
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 11,
-                  letterSpacing: '0.06em',
-                  background: creating || !newTitle.trim() ? 'rgba(96,165,250,0.06)' : 'rgba(96,165,250,0.15)',
-                  color: creating || !newTitle.trim() ? 'rgba(96,165,250,0.4)' : '#60a5fa',
-                  border: `1px solid ${creating || !newTitle.trim() ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.3)'}`,
-                  padding: '4px 12px',
-                  borderRadius: 4,
-                  cursor: creating || !newTitle.trim() ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {creating ? 'CREATING...' : 'CREATE'}
-              </button>
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-glass border border-[var(--border-hover)] rounded-[var(--radius-lg)] p-8 shadow-2xl overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[var(--agent-sparky)] to-[var(--agent-nova)]" />
+              
+              <h3 className="font-[var(--font-display)] text-2xl tracking-[0.1em] text-[var(--text-primary)] mb-6">NEW TICKET</h3>
+              
+              <div className="space-y-4">
+                <input
+                  placeholder="What needs to be done?"
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateTicket() }}
+                  className="w-full bg-[var(--surface)] border border-[var(--border)] focus:border-[var(--agent-sparky)] rounded-xl px-4 py-3 font-[var(--font-mono)] text-sm text-[var(--text-primary)] outline-none transition-all placeholder:opacity-50"
+                  autoFocus
+                />
+                <textarea
+                  placeholder="Add details (optional)..."
+                  value={newDesc}
+                  onChange={e => setNewDesc(e.target.value)}
+                  rows={4}
+                  className="w-full bg-[var(--surface)] border border-[var(--border)] focus:border-[var(--agent-sparky)] rounded-xl px-4 py-3 font-[var(--font-mono)] text-sm text-[var(--text-primary)] outline-none transition-all resize-none placeholder:opacity-50"
+                />
+              </div>
+
+              {createError && (
+                <div className="mt-4 p-3 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={14} className="text-[var(--danger)]" />
+                  <span className="font-[var(--font-mono)] text-[10px] text-[var(--danger)] font-bold">{createError}</span>
+                </div>
+              )}
+
+              <div className="mt-8 flex gap-3 justify-end">
+                <button
+                  onClick={() => setNewTicketOpen(false)}
+                  className="px-6 py-2 rounded-full font-[var(--font-display)] text-xs tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleCreateTicket}
+                  disabled={creating || !newTitle.trim()}
+                  className="px-8 py-2 rounded-full font-[var(--font-display)] text-xs tracking-widest bg-[var(--agent-sparky)] text-white shadow-lg shadow-[var(--agent-sparky)]/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all"
+                >
+                  {creating ? 'CREATING...' : 'CREATE'}
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </DndContext>
   )
 }

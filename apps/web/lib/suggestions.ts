@@ -1,9 +1,5 @@
 /**
  * Suggestions module for saving AI-generated ticket matches to Supabase
- *
- * NOTE: Ensure the ai_suggestions table has the following columns:
- * ALTER TABLE ai_suggestions ADD COLUMN IF NOT EXISTS reasoning text;
- * ALTER TABLE ai_suggestions ADD COLUMN IF NOT EXISTS confidence integer DEFAULT 0;
  */
 
 import { supabaseAdmin } from "@/lib/supabase";
@@ -14,21 +10,26 @@ export async function saveSuggestions(
   commitSha: string,
   commitMessage: string,
   matches: TicketMatch[],
-  ticketPaths: Record<string, string>
+  ticketPaths: Record<string, string>,
+  tickets: { id: string; status: string }[]
 ): Promise<void> {
   if (matches.length === 0) return;
 
-  const rows = matches.map((m) => ({
-    project_id: projectId,
-    ticket_id: m.ticketId,
-    ticket_path: ticketPaths[m.ticketId] ?? "",
-    commit_sha: commitSha,
-    commit_message: commitMessage,
-    suggested_status: m.suggestedStatus ?? "in_progress",
-    confidence: Math.round(m.confidence * 100),
-    reasoning: m.reasoning,
-    status: "pending",
-  }));
+  const rows = matches.map((m) => {
+    const ticket = tickets.find(t => t.id === m.ticketId);
+    return {
+      project_id: projectId,
+      ticket_id: m.ticketId,
+      ticket_path: ticketPaths[m.ticketId] ?? "",
+      old_status: ticket?.status ?? "backlog",
+      commit_sha: commitSha,
+      commit_message: commitMessage,
+      suggested_status: m.suggestedStatus ?? "in_progress",
+      confidence: m.confidence,
+      reasoning: m.reasoning,
+      status: "pending",
+    };
+  });
 
   const { error } = await supabaseAdmin.from("ai_suggestions").insert(rows);
   if (error) console.error("[suggestions] Failed to save:", error.message);

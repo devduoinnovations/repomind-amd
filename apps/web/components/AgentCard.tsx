@@ -1,5 +1,5 @@
-'use client'
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { AgentState } from '@/lib/types'
 import { MascotSprite } from './mascots/MascotSprite'
 
@@ -10,60 +10,90 @@ interface Props {
 
 export function AgentCard({ agent, onClick }: Props) {
   const [hover, setHover] = useState(false)
-  const { name, color, status, role, model, isAmd, voiceLine } = agent
+  const { name, color, status, role, isAmd, voiceLine } = agent
   const working = status === 'working'
   const done = status === 'done'
 
   return (
-    <div
-      data-agent={name.toLowerCase()}
+    <motion.div
+      whileHover={{ y: -2, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className={`agent-card${working ? ' is-working' : ''}${done ? ' is-done' : ''}`}
-      style={{
-        '--agent': color,
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderLeft: `4px solid ${color}`,
-        borderRadius: 10,
-        padding: '12px 12px 12px 14px',
-        cursor: 'pointer',
-        position: 'relative',
-        boxShadow: working ? `0 0 28px ${color}55` : 'none',
-        transition: 'box-shadow 240ms var(--ease-snap)',
-      } as React.CSSProperties}
+      className={`
+        relative overflow-hidden cursor-pointer group
+        bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)]
+        p-3 transition-all duration-500 card-shadow
+        hover:border-[var(--brand)]/30
+      `}
     >
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <MascotSprite name={name} state={working ? 'working' : 'idle'} w={44} h={66} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color, lineHeight: 1, letterSpacing: '0.04em' }}>{name}</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 3 }}>{role}</div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: working ? color : (done ? '#22c55e' : '#4e4b6a'),
-              boxShadow: working ? `0 0 8px ${color}` : 'none',
-              animation: working ? 'pulse 1.2s var(--ease-pulse) infinite' : 'none',
-            }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: working ? color : 'var(--text-muted)', textTransform: 'uppercase' }}>
+      {/* Background Accent Gradient */}
+      <div 
+        className="absolute -inset-2 opacity-0 group-hover:opacity-20 transition-opacity duration-700 pointer-events-none blur-xl"
+        style={{ background: `radial-gradient(circle at 30% 30%, ${color}, transparent 70%)` }}
+      />
+      
+      {/* Animated Edge Glow */}
+      <div className="absolute top-0 left-0 w-1 h-full transition-all duration-500 group-hover:w-1.5" style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
+
+      <div className="flex gap-2 items-center relative z-10 pl-1">
+        <div className="flex-shrink-0 relative">
+          <div className="absolute inset-0 bg-white/20 blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          <MascotSprite name={name} state={working ? 'working' : 'idle'} w={40} h={60} />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="font-[var(--font-display)] text-xl tracking-wider leading-none mb-0.5 drop-shadow-sm transition-transform duration-500 group-hover:translate-x-1" style={{ color }}>
+            {name}
+          </div>
+          <div className="font-[var(--font-mono)] text-[8px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-black opacity-60">
+            {role}
+          </div>
+          
+          <div className="flex gap-1.5 items-center mt-2.5">
+            <div className="relative">
+              {working && (
+                 <div className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ backgroundColor: color }} />
+              )}
+              <div 
+                className={`w-2 h-2 rounded-full relative z-10 transition-all duration-500 ${working ? 'scale-110' : ''}`}
+                style={{ 
+                  background: working ? color : (done ? 'var(--success)' : 'var(--text-muted)'),
+                  boxShadow: working ? `0 0 10px ${color}` : 'none'
+                }}
+              />
+            </div>
+            <span className={`
+              font-[var(--font-mono)] text-[9px] uppercase tracking-[0.1em] font-black transition-colors duration-500
+              ${working ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}
+            `}>
               {status}
             </span>
             {isAmd && (
-              <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 8, letterSpacing: '0.1em', color: '#ed1c24', border: '1px solid rgba(237,28,36,0.4)', borderRadius: 999, padding: '1px 5px' }}>AMD</span>
+              <span className="ml-auto font-[var(--font-mono)] text-[7px] font-black text-[var(--amd-red)] border border-[var(--amd-red)]/40 rounded px-1 py-0.5 bg-[var(--amd-red)]/10 uppercase tracking-tighter whitespace-nowrap">
+                AMD ROCm
+              </span>
             )}
           </div>
         </div>
       </div>
-      {hover && voiceLine && (
-        <div style={{
-          marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)',
-          fontFamily: 'var(--font-body)', fontStyle: 'italic', fontSize: 12,
-          color: 'var(--text-secondary)', lineHeight: 1.4,
-        }}>
-          &ldquo;{voiceLine}&rdquo;
-        </div>
-      )}
-    </div>
+
+      <AnimatePresence>
+        {hover && voiceLine && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0, y: 5 }}
+            animate={{ height: 'auto', opacity: 1, y: 0 }}
+            exit={{ height: 0, opacity: 0, y: 5 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 pt-3 border-t border-[var(--border)] font-[var(--font-ui)] font-medium text-[11px] text-[var(--text-secondary)] leading-relaxed relative">
+               <span className="absolute -top-2 left-2 bg-[var(--surface)] px-1 text-[8px] text-[var(--text-muted)] opacity-50 uppercase tracking-widest font-black">Thought</span>
+               &ldquo;{voiceLine}&rdquo;
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
